@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'supabase' => [
+        'url' => env('SUPABASE_URL'),
+        'key' => env('SUPABASE_KEY'),
+        'bucket' => env('SUPABASE_BUCKET', 'road-reports'),
+    ],
+
+    'yolo' => [
+        'python_path' => env('PYTHON_PATH'),
+    ],
+
 ];

@@ -19,9 +19,9 @@ class StorageService
 
     public function __construct()
     {
-        $this->bucket = env('SUPABASE_BUCKET', 'road-reports');
-        $this->supabaseUrl = env('SUPABASE_URL');
-        $this->supabaseKey = env('SUPABASE_KEY');
+        $this->bucket = config('services.supabase.bucket') ?: env('SUPABASE_BUCKET', 'road-reports');
+        $this->supabaseUrl = config('services.supabase.url') ?: env('SUPABASE_URL');
+        $this->supabaseKey = config('services.supabase.key') ?: env('SUPABASE_KEY');
     }
 
     /**

@@ -18,8 +18,9 @@ class YoloService
 
     public function __construct()
     {
-        if (env('PYTHON_PATH')) {
-            $this->pythonPath = env('PYTHON_PATH');
+        $customPython = config('services.yolo.python_path') ?: env('PYTHON_PATH');
+        if ($customPython) {
+            $this->pythonPath = $customPython;
         } elseif (PHP_OS_FAMILY === 'Windows') {
             $winPython = 'C:\\Users\\Adiwinata\\AppData\\Local\\Programs\\Python\\Python312\\python.exe';
             $this->pythonPath = file_exists($winPython) ? $winPython : 'python';
