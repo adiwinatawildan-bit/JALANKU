@@ -305,7 +305,7 @@
             btn.disabled = true;
 
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
+                function onGpsSuccess(position) {
                     var lat = position.coords.latitude;
                     var lng = position.coords.longitude;
                     map.setView([lat, lng], 17);
@@ -314,13 +314,20 @@
 
                     btn.innerHTML = originalText;
                     btn.disabled = false;
-                }, function(err) {
-                    alert('Gagal mendeteksi GPS secara otomatis. Silakan geser pin pada peta secara manual.');
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }, {
+                }
+
+                function onGpsError(err) {
+                    // Fallback to standard accuracy if high accuracy times out
+                    navigator.geolocation.getCurrentPosition(onGpsSuccess, function(fallbackErr) {
+                        alert('Izin lokasi belum diaktifkan atau GPS tidak terdeteksi. Silakan klik atau geser pin merah pada peta secara manual.');
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+                }
+
+                navigator.geolocation.getCurrentPosition(onGpsSuccess, onGpsError, {
                     enableHighAccuracy: true,
-                    timeout: 10000,
+                    timeout: 8000,
                     maximumAge: 0
                 });
             } else {
