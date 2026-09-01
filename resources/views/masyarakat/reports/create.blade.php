@@ -192,11 +192,11 @@
             </div>
 
             <!-- Submit Button -->
-            <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
-                <a href="{{ route('masyarakat.dashboard') }}" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+            <div class="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+                <a href="{{ route('masyarakat.dashboard') }}" class="w-full py-3.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm text-center flex items-center justify-center transition">
                     Batal
                 </a>
-                <button type="submit" id="btn-submit" class="px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-navy-950 font-extrabold text-sm shadow-xl shadow-amber-500/25 hover:scale-105 active:scale-95 transition">
+                <button type="submit" id="btn-submit" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-navy-950 font-extrabold text-sm shadow-xl shadow-amber-500/25 flex items-center justify-center transition">
                     <i class="fa-solid fa-paper-plane mr-2"></i> Kirim Laporan Pengaduan
                 </button>
             </div>

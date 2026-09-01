@@ -31,6 +31,54 @@
         </div>
     </div>
 
+    <!-- Fitur Unggulan Sistem -->
+    <div class="space-y-6">
+        <div class="text-center max-w-3xl mx-auto space-y-2">
+            <span class="text-amber-600 font-bold text-xs uppercase tracking-widest">Inovasi Layanan Publik</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 tracking-tight">
+                Fitur Unggulan Sistem {{ \App\Models\SystemSetting::appName() }}
+            </h2>
+            <p class="text-slate-600 text-sm">
+                Dirancang khusus untuk monitoring infrastruktur jalan dengan teknologi AI Computer Vision dan Decision Support System terdepan.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Feature 1: YOLO Vision AI -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:border-amber-500/50 hover:shadow-md transition duration-200 space-y-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-2xl border border-amber-500/30">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <h3 class="text-lg font-bold text-navy-900">Analisis Foto AI (YOLO)</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Sistem mendeteksi jenis cacat jalan seperti pothole (lubang), crack (retakan), dan landslide (longsor) secara otomatis beserta estimasi kerusakan.
+                </p>
+            </div>
+
+            <!-- Feature 2: TOPSIS Ranking -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:border-sky-500/50 hover:shadow-md transition duration-200 space-y-4">
+                <div class="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center text-2xl border border-sky-500/30">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </div>
+                <h3 class="text-lg font-bold text-navy-900">Rekomendasi Prioritas (TOPSIS)</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Sistem Pendukung Keputusan multi-kriteria berbasis parameter bobot dinamis untuk memberikan peringkat jalan mana yang wajib didahulukan secara adil dan transparan.
+                </p>
+            </div>
+
+            <!-- Feature 3: Weekly Progress Timeline -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition duration-200 space-y-4">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-2xl border border-emerald-500/30">
+                    <i class="fa-solid fa-images"></i>
+                </div>
+                <h3 class="text-lg font-bold text-navy-900">Transparansi Progres Mingguan</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Dokumentasi visual foto kondisi awal, progres mingguan berkala, hingga selesai (100%) yang dapat dilihat bebas oleh publik melalui lightbox gallery.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Privacy Card -->
     <div class="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-sm space-y-4">
         <div class="w-12 h-12 rounded-2xl bg-navy-900 text-sky-400 flex items-center justify-center text-xl">
