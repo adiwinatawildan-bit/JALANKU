@@ -1,0 +1,231 @@
+/* JALAN KU Custom Styling & Utility Classes */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary-navy: #0f172a;
+  --secondary-navy: #1e293b;
+  --accent-amber: #f59e0b;
+  --accent-orange: #ea580c;
+  --bg-canvas: #f8fafc;
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-canvas);
+  color: #1e293b;
+}
+
+/* Monospace Font for Tickets & Coordinates */
+.font-mono,
+[class*="font-mono"] {
+  font-family: var(--font-mono) !important;
+}
+
+/* Glassmorphism Card */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.glass-panel-dark {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Road Marking Stripes Pattern */
+.road-stripes {
+  background: repeating-linear-gradient(
+    45deg,
+    #f59e0b,
+    #f59e0b 15px,
+    #1e293b 15px,
+    #1e293b 30px
+  );
+}
+
+/* Timeline Custom Connector */
+.timeline-step {
+  position: relative;
+}
+.timeline-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 2rem;
+  left: 1.25rem;
+  bottom: -1rem;
+  width: 2px;
+  background-color: #cbd5e1;
+}
+
+/* Leaflet Map Custom Marker Styles */
+.custom-marker-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  margin: -20px 0 0 -20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-marker-pin::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  margin: 9px 0 0 9px;
+  background: #ffffff;
+  position: absolute;
+  border-radius: 50%;
+}
+
+.custom-marker-pulse {
+  background: rgba(239, 68, 68, 0.3);
+  border-radius: 50%;
+  height: 14px;
+  width: 14px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 11px 0px 0px -12px;
+  transform: rotateX(55deg);
+  z-index: -2;
+  animation: pulsate 1.5s ease-out infinite;
+}
+
+@keyframes pulsate {
+  0% { transform: scale(0.1, 0.1); opacity: 0.0; }
+  50% { opacity: 1.0; }
+  100% { transform: scale(2.0, 2.0); opacity: 0.0; }
+}
+
+/* Photo Thumbnail Hover Zoom */
+.photo-card-zoom {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.photo-card-zoom:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================
+   MICRO-ANIMATIONS
+   ============================ */
+
+/* Fade In Up — for cards and sections on page load */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Staggered delay helpers */
+.animate-delay-100 { animation-delay: 0.1s; opacity: 0; }
+.animate-delay-200 { animation-delay: 0.2s; opacity: 0; }
+.animate-delay-300 { animation-delay: 0.3s; opacity: 0; }
+
+/* Fade In — simple opacity animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Slide In Left — for sidebar drawer */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+/* ============================
+   MOBILE-SPECIFIC OVERRIDES
+   ============================ */
+
+/* Safe area padding for iPhones with notch/home indicator */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Very small screen heading override (< 360px) */
+@media (max-width: 360px) {
+  .text-3xl,
+  .text-4xl,
+  .text-5xl {
+    font-size: 1.5rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .text-2xl {
+    font-size: 1.25rem !important;
+    line-height: 1.3 !important;
+  }
+}
+
+/* Leaflet GestureHandling overlay message styling */
+.leaflet-gesture-handling-touch-warning,
+.leaflet-gesture-handling-scroll-warning {
+  font-family: var(--font-main) !important;
+  font-weight: 600 !important;
+}
+
+/* ============================
+   CUSTOM SCROLLBAR
+   ============================ */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark sidebar scrollbar */
+.bg-navy-950 ::-webkit-scrollbar-track,
+aside ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+.bg-navy-950 ::-webkit-scrollbar-thumb,
+aside ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
