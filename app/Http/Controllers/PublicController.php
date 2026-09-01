@@ -131,12 +131,21 @@ class PublicController extends Controller
             ->pluck('count', 'damage_type')
             ->toArray();
 
+        $driver = DB::getDriverName();
+        if ($driver === 'sqlite') {
+            $monthExpr = "strftime('%Y-%m', created_at)";
+        } elseif ($driver === 'pgsql') {
+            $monthExpr = "TO_CHAR(created_at, 'YYYY-MM')";
+        } else {
+            $monthExpr = "DATE_FORMAT(created_at, '%Y-%m')";
+        }
+
         $monthlyTrends = Report::select(
-                DB::raw(DB::getDriverName() === "sqlite" ? "strftime('%Y-%m', created_at) as month" : "DATE_FORMAT(created_at, '%Y-%m') as month"),
+                DB::raw("{$monthExpr} as month"),
                 DB::raw('count(*) as total')
             )
-            ->groupBy('month')
-            ->orderBy('month', 'asc')
+            ->groupBy(DB::raw($monthExpr))
+            ->orderBy(DB::raw($monthExpr), 'asc')
             ->take(12)
             ->get();
 

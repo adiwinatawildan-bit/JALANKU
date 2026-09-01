@@ -84,17 +84,22 @@ class AdminController extends Controller
             ->take(10)
             ->get();
 
-        // Chart Data (SQLite & MySQL compatible)
-        $monthExpr = DB::getDriverName() === 'sqlite'
-            ? "strftime('%Y-%m', created_at) as month"
-            : "DATE_FORMAT(created_at, '%Y-%m') as month";
+        // Chart Data (SQLite, Postgres & MySQL compatible)
+        $driver = DB::getDriverName();
+        if ($driver === 'sqlite') {
+            $monthExpr = "strftime('%Y-%m', created_at)";
+        } elseif ($driver === 'pgsql') {
+            $monthExpr = "TO_CHAR(created_at, 'YYYY-MM')";
+        } else {
+            $monthExpr = "DATE_FORMAT(created_at, '%Y-%m')";
+        }
 
         $monthlyData = Report::select(
-                DB::raw($monthExpr),
+                DB::raw("{$monthExpr} as month"),
                 DB::raw('count(*) as count')
             )
-            ->groupBy('month')
-            ->orderBy('month', 'asc')
+            ->groupBy(DB::raw($monthExpr))
+            ->orderBy(DB::raw($monthExpr), 'asc')
             ->take(6)
             ->get();
 
