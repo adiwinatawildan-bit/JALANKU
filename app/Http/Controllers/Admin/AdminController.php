@@ -391,16 +391,16 @@ class AdminController extends Controller
         $report = Report::with(['photos', 'progressUpdates.photos'])->findOrFail($id);
         $ticket = $report->ticket_number;
 
-        // 1. Delete physical files from storage
+        // 1. Delete physical files from storage (Supabase / Local)
         foreach ($report->photos as $photo) {
-            if ($photo->file_path && Storage::disk('public')->exists($photo->file_path)) {
-                Storage::disk('public')->delete($photo->file_path);
+            if ($photo->file_path) {
+                $this->storageService->deleteStorageFile($photo->file_path);
             }
         }
         foreach ($report->progressUpdates as $update) {
             foreach ($update->photos as $pPhoto) {
-                if ($pPhoto->file_path && Storage::disk('public')->exists($pPhoto->file_path)) {
-                    Storage::disk('public')->delete($pPhoto->file_path);
+                if ($pPhoto->file_path) {
+                    $this->storageService->deleteStorageFile($pPhoto->file_path);
                 }
             }
         }
@@ -412,7 +412,8 @@ class AdminController extends Controller
             $update->delete();
         }
         $report->statusHistories()->delete();
-        $report->detections()->delete();
+        $report->damageDetections()->delete();
+        $report->location()->delete();
         $report->assessment()?->delete();
         $report->priorityResult()?->delete();
 
@@ -421,8 +422,12 @@ class AdminController extends Controller
 
         $report->delete();
 
-        // 4. Recalculate TOPSIS rankings
-        $this->topsisService->calculateAll();
+        // 4. Recalculate TOPSIS rankings safely
+        try {
+            $this->topsisService->calculateAll();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('TOPSIS recalculation after delete failed: ' . $e->getMessage());
+        }
 
         AuditLog::record(
             activity: "Hapus Laporan #{$ticket}",
