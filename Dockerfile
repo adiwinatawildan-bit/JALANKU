@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.4-apache
 
 # Install system dependencies & Python
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -39,7 +39,7 @@ WORKDIR /var/www/html
 COPY . /var/www/html
 
 # Install PHP Dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
