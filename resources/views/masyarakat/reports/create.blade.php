@@ -421,6 +421,17 @@
             photoInput.files = dt.files;
         }
 
+        // Prevent double submit on slow connections
+        var reportForm = document.getElementById('report-form');
+        var btnSubmit = document.getElementById('btn-submit');
+        if (reportForm && btnSubmit) {
+            reportForm.addEventListener('submit', function() {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengirim Laporan...';
+                btnSubmit.classList.add('opacity-75', 'cursor-not-allowed');
+            });
+        }
+
         setTimeout(function() {
             map.invalidateSize();
         }, 400);

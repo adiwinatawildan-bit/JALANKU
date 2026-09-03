@@ -73,7 +73,7 @@ class StorageService
         if ($this->hasSupabaseConfig()) {
             try {
                 $endpoint = rtrim($this->supabaseUrl, '/') . "/storage/v1/object/{$this->bucket}/{$relativePath}";
-                $response = Http::withHeaders([
+                $response = Http::timeout(6)->connectTimeout(3)->withHeaders([
                     'Authorization' => 'Bearer ' . $this->supabaseKey,
                     'apikey' => $this->supabaseKey,
                 ])->withBody(file_get_contents($file->getRealPath()), $file->getMimeType())
@@ -90,7 +90,7 @@ class StorageService
                     ];
                 }
                 Log::warning('Supabase storage upload returned status ' . $response->status() . ': ' . $response->body() . '. Falling back to local storage.');
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::warning('Supabase storage error: ' . $e->getMessage() . '. Falling back to local storage.');
             }
         }
@@ -169,7 +169,7 @@ class StorageService
         if ($this->hasSupabaseConfig()) {
             try {
                 $endpoint = rtrim($this->supabaseUrl, '/') . "/storage/v1/object/{$this->bucket}/{$cleanPath}";
-                $response = Http::withHeaders([
+                $response = Http::timeout(5)->connectTimeout(3)->withHeaders([
                     'Authorization' => 'Bearer ' . $this->supabaseKey,
                     'apikey' => $this->supabaseKey,
                 ])->delete($endpoint);
@@ -177,7 +177,7 @@ class StorageService
                 if ($response->successful()) {
                     return true;
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::warning('Supabase storage delete failed: ' . $e->getMessage());
             }
         }

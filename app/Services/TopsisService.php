@@ -294,36 +294,43 @@ class TopsisService
         $roadName = $report->road_name ?: 'Jalan ini';
         $reasons = [];
 
-        if (($raw['C1'] ?? 0) >= 4.0) {
-            $reasons[] = 'memiliki tingkat kerusakan yang parah/luas';
-        }
-        if (($raw['C2'] ?? 0) >= 4.0) {
-            $reasons[] = 'berisiko tinggi terhadap keselamatan pengguna jalan';
-        }
-        if (($raw['C3'] ?? 0) >= 4.0) {
-            $reasons[] = 'memiliki volume lalu lintas padat';
-        }
-        if (($raw['C4'] ?? 0) >= 3) {
-            $reasons[] = "mendapat banyak aduan masyarakat ({$raw['C4']} laporan serupa)";
-        }
-        if (($raw['C5'] ?? 0) >= 4.0) {
-            $reasons[] = 'merupakan jalur fungsi utama/arteri';
-        }
-        if (($raw['C6'] ?? 0) >= 4.0) {
-            $reasons[] = 'berada sangat dekat dengan fasilitas publik vital';
-        }
-        if (($raw['C7'] ?? 0) >= 4.0) {
-            $reasons[] = 'berdampak signifikan terhadap aktivitas warga';
-        }
-        if (($raw['C8'] ?? 0) >= 7) {
-            $reasons[] = "telah menunggu penanganan selama {$raw['C8']} hari";
-        }
+        if ($level === 'Sangat Prioritas' || $level === 'Prioritas Tinggi') {
+            if (($raw['C1'] ?? 0) >= 4.0) {
+                $reasons[] = 'tingkat kerusakan sangat parah/luas';
+            }
+            if (($raw['C2'] ?? 0) >= 4.0) {
+                $reasons[] = 'berisiko tinggi terhadap keselamatan pengguna jalan';
+            }
+            if (($raw['C3'] ?? 0) >= 4.0) {
+                $reasons[] = 'memiliki volume lalu lintas padat';
+            }
+            if (($raw['C4'] ?? 0) >= 2) {
+                $reasons[] = "mendapat banyak akumulasi aduan masyarakat ({$raw['C4']} laporan serupa)";
+            }
+            if (($raw['C5'] ?? 0) >= 4.0) {
+                $reasons[] = 'merupakan jalur fungsi utama/arteri';
+            }
+            if (($raw['C6'] ?? 0) >= 4.0) {
+                $reasons[] = 'berada sangat dekat dengan fasilitas publik vital';
+            }
+            if (($raw['C7'] ?? 0) >= 4.0) {
+                $reasons[] = 'berdampak signifikan terhadap aktivitas warga';
+            }
+            if (($raw['C8'] ?? 0) >= 7) {
+                $reasons[] = "telah menunggu penanganan selama {$raw['C8']} hari";
+            }
 
-        if (empty($reasons)) {
-            $reasons[] = 'kerusakan berada pada taraf pemeliharaan berkala';
-        }
+            if (empty($reasons)) {
+                $reasons[] = 'memiliki skor urgensi kumulatif tertinggi dibanding usulan ruas jalan lainnya';
+            }
 
-        $reasonText = implode(', ', $reasons);
-        return "{$roadName} ditetapkan dengan status [{$level}] (Skor TOPSIS: {$score}) karena {$reasonText}.";
+            $reasonText = implode(', ', $reasons);
+            return "{$roadName} ditetapkan dengan status [{$level}] (Skor TOPSIS: {$score}) karena {$reasonText}.";
+        } elseif ($level === 'Sedang') {
+            return "{$roadName} ditetapkan dengan status [Sedang] (Skor TOPSIS: {$score}) dan direkomendasikan masuk dalam jadwal pemeliharaan berkala.";
+        } else {
+            // Status Rendah
+            return "{$roadName} ditetapkan dengan status [Rendah] (Skor TOPSIS: {$score}) karena tingkat urgensi penanganannya berada di bawah laporan ruas jalan lain yang lebih mendesak atau memiliki lebih banyak akumulasi aduan.";
+        }
     }
 }

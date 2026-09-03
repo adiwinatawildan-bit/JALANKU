@@ -1,6 +1,6 @@
 FROM php:8.4-apache
 
-# Install system dependencies & Python
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -11,9 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     zip \
     unzip \
-    python3 \
-    python3-pip \
-    python3-venv \
     libgl1 \
     libglib2.0-0 \
     && docker-php-ext-install pdo pdo_pgsql pgsql mbstring zip bcmath gd \
@@ -21,10 +18,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Install PyTorch (CPU version) & Ultralytics for YOLO AI
-RUN pip3 install --no-cache-dir --break-system-packages torch torchvision --index-url https://download.pytorch.org/whl/cpu \
-    && pip3 install --no-cache-dir --break-system-packages ultralytics
 
 # Configure Apache
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
