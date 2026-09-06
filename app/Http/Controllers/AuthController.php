@@ -95,6 +95,54 @@ class AuthController extends Controller
         return redirect()->route('masyarakat.dashboard')->with('success', 'Registrasi berhasil! Selamat datang di Portal JALAN KU.');
     }
 
+    public function showForgotPassword()
+    {
+        if (Auth::check()) {
+            return $this->redirectBasedOnRole(Auth::user());
+        }
+        return view('auth.forgot-password');
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'exists:users,email'],
+            'phone' => ['required', 'string'],
+            'password' => ['required', 'confirmed', Password::min(6)],
+        ], [
+            'email.exists' => 'Alamat email tidak terdaftar dalam sistem.',
+            'phone.required' => 'Nomor HP terdaftar wajib diisi untuk verifikasi keamanan.',
+            'password.required' => 'Password baru wajib diisi.',
+            'password.min' => 'Password baru minimal harus 6 karakter.',
+            'password.confirmed' => 'Konfirmasi password baru tidak cocok.',
+        ]);
+
+        $user = User::where('email', $validated['email'])->first();
+
+        // Verify phone number match (ignoring dashes/spaces)
+        $inputPhone = preg_replace('/[^0-9]/', '', $validated['phone']);
+        $userPhone = preg_replace('/[^0-9]/', '', $user->phone ?? '');
+
+        if (!empty($userPhone) && $inputPhone !== $userPhone && !str_ends_with($userPhone, $inputPhone) && !str_ends_with($inputPhone, $userPhone)) {
+            return back()->withErrors([
+                'phone' => 'Nomor HP tidak cocok dengan data akun yang terdaftar.',
+            ])->withInput($request->only('email', 'phone'));
+        }
+
+        $user->password = Hash::make($validated['password']);
+        $user->save();
+
+        AuditLog::record(
+            activity: 'Reset Password Berhasil',
+            targetType: 'User',
+            targetId: $user->id,
+            description: "Pengguna {$user->name} ({$user->role->display_name}) berhasil mereset password akun.",
+            userId: $user->id
+        );
+
+        return redirect()->route('login')->with('success', 'Password akun Anda berhasil diubah! Silakan login menggunakan password baru.');
+    }
+
     public function logout(Request $request)
     {
         if (Auth::check()) {

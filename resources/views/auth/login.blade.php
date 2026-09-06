@@ -33,6 +33,7 @@
                 <div class="space-y-1">
                     <div class="flex justify-between items-center">
                         <label for="password" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Password</label>
+                        <a href="{{ route('password.request') }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:underline">Lupa Sandi?</a>
                     </div>
                     <div class="relative">
                         <i class="fa-solid fa-key absolute left-3.5 top-3 text-slate-400 text-sm"></i>
