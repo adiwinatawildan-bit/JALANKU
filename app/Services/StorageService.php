@@ -64,6 +64,19 @@ class StorageService
     }
 
     /**
+     * Upload an application branding logo.
+     * Path: road-reports/settings/{fileName}
+     */
+    public function uploadSettingLogo(UploadedFile $file): array
+    {
+        $ext = $file->getClientOriginalExtension() ?: 'png';
+        $fileName = 'app_logo_' . time() . '.' . $ext;
+        $relativePath = "settings/{$fileName}";
+
+        return $this->storeFile($file, $relativePath, $fileName);
+    }
+
+    /**
      * Internal store handler to Supabase or Local Public disk
      */
     protected function storeFile(UploadedFile $file, string $relativePath, string $fileName): array

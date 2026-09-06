@@ -61,7 +61,6 @@ class SystemSetting extends Model
             if (file_exists(public_path($logo))) {
                 return asset($logo);
             }
-            return asset('storage/' . $logo);
         }
 
         return asset('images/logo.png');

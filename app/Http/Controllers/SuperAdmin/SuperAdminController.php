@@ -365,17 +365,15 @@ class SuperAdminController extends Controller
         ]);
 
         if ($request->hasFile('app_logo')) {
-            $currentLogo = SystemSetting::get('app_logo');
-            if ($currentLogo && Storage::disk('public')->exists($currentLogo)) {
-                Storage::disk('public')->delete($currentLogo);
+            $storageService = app(\App\Services\StorageService::class);
+            $res = $storageService->uploadSettingLogo($request->file('app_logo'));
+            if (!empty($res['success']) && !empty($res['file_url'])) {
+                SystemSetting::set('app_logo', $res['file_url'], 'branding', 'string');
+            } else {
+                $logoPath = $request->file('app_logo')->store('settings', 'public');
+                SystemSetting::set('app_logo', $logoPath, 'branding', 'string');
             }
-            $logoPath = $request->file('app_logo')->store('settings', 'public');
-            SystemSetting::set('app_logo', $logoPath, 'branding', 'string');
         } elseif ($request->boolean('remove_logo')) {
-            $currentLogo = SystemSetting::get('app_logo');
-            if ($currentLogo && Storage::disk('public')->exists($currentLogo)) {
-                Storage::disk('public')->delete($currentLogo);
-            }
             SystemSetting::set('app_logo', '', 'branding', 'string');
         }
 
