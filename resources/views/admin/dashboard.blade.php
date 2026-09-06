@@ -290,9 +290,20 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Monthly Chart -->
         <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
-            <h3 class="text-sm font-bold text-navy-900 flex items-center">
-                <i class="fa-solid fa-chart-area text-amber-500 mr-2"></i> Tren Laporan Masuk Per Bulan
-            </h3>
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-navy-900 flex items-center">
+                    <i class="fa-solid fa-chart-area text-amber-500 mr-2"></i> Tren Laporan Masuk Per Bulan
+                </h3>
+                @if(isset($availableYears) && count($availableYears) > 0)
+                    <form method="GET" action="{{ route('admin.dashboard') }}" class="inline-block">
+                        <select name="year" onchange="this.form.submit()" class="px-2.5 py-1 text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500">
+                            @foreach($availableYears as $yr)
+                                <option value="{{ $yr }}" {{ ($selectedYear ?? '') == $yr ? 'selected' : '' }}>Tahun {{ $yr }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endif
+            </div>
             <div id="admin-chart-monthly" class="h-64"></div>
         </div>
 
@@ -317,18 +328,28 @@
         var mSeries = mData.map(d => d.count);
 
         var monthlyOptions = {
-            series: [{ name: 'Laporan Baru', data: mSeries }],
+            series: [{ name: 'Laporan Masuk', data: mSeries.length ? mSeries : [0] }],
             chart: { type: 'area', height: 250, toolbar: { show: false } },
             stroke: { curve: 'smooth', width: 2 },
             colors: ['#f59e0b'],
-            xaxis: { categories: mCategories },
+            xaxis: { categories: mCategories.length ? mCategories : ['-'] },
+            yaxis: {
+                min: 0,
+                forceNiceScale: true,
+                decimalsInFloat: 0,
+                labels: {
+                    formatter: function(val) {
+                        return Math.round(val);
+                    }
+                }
+            },
             dataLabels: { enabled: false }
         };
         new ApexCharts(document.querySelector("#admin-chart-monthly"), monthlyOptions).render();
 
         // Damage type chart
         var dData = @json($damageTypeData);
-        var dCategories = Object.keys(dData).map(k => k.charAt(0).toUpperCase() + k.slice(1));
+        var dCategories = Object.keys(dData);
         var dSeries = Object.values(dData);
 
         var damageOptions = {
@@ -337,6 +358,13 @@
             plotOptions: { bar: { borderRadius: 6, horizontal: true } },
             colors: ['#0ea5e9'],
             xaxis: { categories: dCategories },
+            yaxis: {
+                labels: {
+                    formatter: function(val) {
+                        return typeof val === 'string' ? val : Math.round(val);
+                    }
+                }
+            },
             dataLabels: { enabled: true }
         };
         new ApexCharts(document.querySelector("#admin-chart-damage"), damageOptions).render();

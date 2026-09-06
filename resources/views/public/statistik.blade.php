@@ -126,7 +126,7 @@
 
         // Damage Bar Chart
         var damageData = @json($damageTypeCounts);
-        var damageLabels = Object.keys(damageData).map(k => k.charAt(0).toUpperCase() + k.slice(1));
+        var damageLabels = Object.keys(damageData);
         var damageSeries = Object.values(damageData);
 
         var damageOptions = {
@@ -134,6 +134,16 @@
             chart: { type: 'bar', height: 280, toolbar: { show: false } },
             plotOptions: { bar: { borderRadius: 6, columnWidth: '45%' } },
             xaxis: { categories: damageLabels },
+            yaxis: {
+                min: 0,
+                forceNiceScale: true,
+                decimalsInFloat: 0,
+                labels: {
+                    formatter: function(val) {
+                        return Math.round(val);
+                    }
+                }
+            },
             colors: ['#f59e0b'],
             dataLabels: { enabled: false }
         };

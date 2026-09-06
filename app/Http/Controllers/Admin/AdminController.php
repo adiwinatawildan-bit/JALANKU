@@ -88,24 +88,62 @@ class AdminController extends Controller
         $driver = DB::getDriverName();
         if ($driver === 'sqlite') {
             $monthExpr = "strftime('%Y-%m', created_at)";
+            $yearExpr = "strftime('%Y', created_at)";
         } elseif ($driver === 'pgsql') {
             $monthExpr = "TO_CHAR(created_at, 'YYYY-MM')";
+            $yearExpr = "TO_CHAR(created_at, 'YYYY')";
         } else {
             $monthExpr = "DATE_FORMAT(created_at, '%Y-%m')";
+            $yearExpr = "DATE_FORMAT(created_at, '%Y')";
         }
 
-        $monthlyData = Report::select(
+        $availableYears = Report::select(DB::raw("{$yearExpr} as year"))
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        if (empty($availableYears)) {
+            $availableYears = [date('Y')];
+        }
+
+        $selectedYear = request('year', $availableYears[0] ?? date('Y'));
+
+        $monthlyQuery = Report::select(
                 DB::raw("{$monthExpr} as month"),
                 DB::raw('count(*) as count')
-            )
-            ->groupBy(DB::raw($monthExpr))
+            );
+
+        if ($driver === 'sqlite') {
+            $monthlyQuery->whereRaw("strftime('%Y', created_at) = ?", [$selectedYear]);
+        } elseif ($driver === 'pgsql') {
+            $monthlyQuery->whereRaw("TO_CHAR(created_at, 'YYYY') = ?", [$selectedYear]);
+        } else {
+            $monthlyQuery->whereRaw("DATE_FORMAT(created_at, '%Y') = ?", [$selectedYear]);
+        }
+
+        $monthlyData = $monthlyQuery->groupBy(DB::raw($monthExpr))
             ->orderBy(DB::raw($monthExpr), 'asc')
-            ->take(6)
             ->get();
 
-        $damageTypeData = Report::select('damage_type', DB::raw('count(*) as count'))
+        $rawDamageTypeData = Report::select('damage_type', DB::raw('count(*) as count'))
             ->groupBy('damage_type')
-            ->pluck('count', 'damage_type');
+            ->pluck('count', 'damage_type')
+            ->toArray();
+
+        $damageTypeData = [];
+        foreach ($rawDamageTypeData as $k => $c) {
+            $mapped = match($k) {
+                'pothole' => 'Lubang (Pothole)',
+                'crack' => 'Retak (Crack)',
+                'landslide' => 'Longsor (Landslide)',
+                'normal', 'lainnya', 'other' => 'Normal / Baik',
+                default => ucfirst($k ?: 'Normal / Baik')
+            };
+            $damageTypeData[$mapped] = ($damageTypeData[$mapped] ?? 0) + $c;
+        }
 
         $opdList = Opd::where('is_active', true)->get();
 
@@ -115,7 +153,9 @@ class AdminController extends Controller
             'topPriorities',
             'monthlyData',
             'damageTypeData',
-            'opdList'
+            'opdList',
+            'availableYears',
+            'selectedYear'
         ));
     }
 

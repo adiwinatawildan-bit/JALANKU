@@ -72,38 +72,55 @@ class YoloService
         }
 
         $count = count($allDetections);
-        $avgConf = $count > 0 ? round($confidenceSum / $count, 1) : 0.0;
+        $totalLandslides = (int) $totalLandslides;
+        $totalPotholes = (int) $totalPotholes;
+        $totalCracks = (int) $totalCracks;
 
-        // Determine damage hierarchy directly from model findings
-        $c1Scale = match (true) {
-            $totalLandslides > 0 => 5.0,
-            $totalPotholes >= 3 || ($totalPotholes > 0 && $totalArea >= 2.0) => 4.2,
-            $totalPotholes > 0 => 3.9,
-            $totalCracks >= 4 || ($totalCracks > 0 && $totalArea >= 1.5) => 3.2,
-            $totalCracks > 0 => 2.8,
-            default => 1.5,
-        };
+        if ($totalLandslides > 0) {
+            $c1Scale = $totalLandslides >= 2 ? 5.0 : 4.6;
+            $c2Safety = $totalLandslides >= 2 ? 5.0 : 4.6;
+            $c7Impact = 5.0;
+        } elseif ($totalPotholes > 0) {
+            $c1Scale = match (true) {
+                $totalPotholes >= 6 => 4.4,
+                $totalPotholes >= 3 => 4.1,
+                $totalPotholes == 2 => 3.8,
+                default => 3.5,
+            };
+            $c2Safety = match (true) {
+                $totalPotholes >= 3 => 4.2,
+                default => 3.7,
+            };
+            $c7Impact = 4.0;
+        } elseif ($totalCracks > 0) {
+            $c1Scale = match (true) {
+                $totalCracks >= 4 => 3.2,
+                $totalCracks >= 2 => 2.8,
+                default => 2.4,
+            };
+            $c2Safety = match (true) {
+                $totalCracks >= 3 => 2.8,
+                default => 2.4,
+            };
+            $c7Impact = 2.5;
+        } else {
+            $c1Scale = 1.0;
+            $c2Safety = 1.0;
+            $c7Impact = 1.0;
+        }
 
-        $c2Safety = match (true) {
-            $totalLandslides > 0 => 5.0,
-            $totalPotholes > 0 => 4.2,
-            $totalCracks > 0 => 2.8,
-            default => 1.5,
-        };
-
-        $c7Impact = match (true) {
-            $totalLandslides > 0 => 5.0,
-            $totalPotholes > 0 => 4.0,
-            $totalCracks > 0 => 2.8,
-            default => 1.5,
-        };
+        $hours = max(1, (int) $report->created_at->diffInHours(now()));
+        $pendingDays = max(1.0, round($hours / 24.0, 1));
+        $sameRoadCount = max(1, Report::where('road_name', $report->road_name)->count());
 
         RoadAssessment::updateOrCreate(
             ['report_id' => $report->id],
             [
                 'c1_damage_scale' => $c1Scale,
                 'c2_user_safety' => $c2Safety,
+                'c4_report_count' => min(10.0, (float) $sameRoadCount),
                 'c7_community_impact' => $c7Impact,
+                'c8_pending_days' => $pendingDays,
             ]
         );
 

@@ -202,73 +202,85 @@ class TopsisService
      */
     public function ensureAssessmentExists(Report $report): RoadAssessment
     {
-        $pendingDays = max(1, (int) $report->created_at->diffInDays(now()));
+        $hours = max(1, (int) $report->created_at->diffInHours(now()));
+        $pendingDays = max(1.0, round($hours / 24.0, 1));
+
+        // Count community reports on the same road (Crowdsourcing / C3)
+        $sameRoadCount = max(1, Report::where('road_name', $report->road_name)->count());
+
         $latestDetection = $report->damageDetections()->latest()->first();
 
         if ($latestDetection) {
             $classes = $latestDetection->detected_classes ?? [];
-            $landslides = $classes['landslide'] ?? 0;
-            $potholes = $classes['pothole'] ?? 0;
-            $cracks = $classes['crack'] ?? 0;
+            $landslides = (int) ($classes['landslide'] ?? 0);
+            $potholes = (int) ($classes['pothole'] ?? 0);
+            $cracks = (int) ($classes['crack'] ?? 0);
+            $totalDefects = (int) ($latestDetection->total_defects ?? 0);
 
             if ($landslides > 0) {
-                $c1Scale = 5.0;
-                $c2Safety = 5.0;
+                $c1Scale = $landslides >= 2 ? 5.0 : 4.6;
+                $c2Safety = $landslides >= 2 ? 5.0 : 4.6;
                 $c7Impact = 5.0;
             } elseif ($potholes > 0) {
                 $c1Scale = match (true) {
-                    $potholes >= 6 => 4.3,
-                    $potholes >= 3 => 4.0,
-                    default => 3.8,
+                    $potholes >= 6 => 4.4,
+                    $potholes >= 3 => 4.1,
+                    $potholes == 2 => 3.8,
+                    default => 3.5,
                 };
-                $c2Safety = 4.2;
+                $c2Safety = match (true) {
+                    $potholes >= 3 => 4.2,
+                    default => 3.7,
+                };
                 $c7Impact = 4.0;
             } elseif ($cracks > 0) {
                 $c1Scale = match (true) {
                     $cracks >= 4 => 3.2,
-                    default => 2.8,
+                    $cracks >= 2 => 2.8,
+                    default => 2.4,
                 };
-                $c2Safety = 2.8;
-                $c7Impact = 2.8;
+                $c2Safety = match (true) {
+                    $cracks >= 3 => 2.8,
+                    default => 2.4,
+                };
+                $c7Impact = 2.5;
             } else {
-                $c1Scale = 1.5;
-                $c2Safety = 1.5;
-                $c7Impact = 1.5;
+                $c1Scale = 1.0;
+                $c2Safety = 1.0;
+                $c7Impact = 1.0;
             }
         } else {
             // Fallback before photo is analyzed
             $damageType = strtolower($report->damage_type ?? '');
-            $disturbance = strtolower($report->disturbance_level ?? '');
 
             $c1Scale = match (true) {
-                str_contains($damageType, 'landslide') || str_contains($damageType, 'longsor') => 5.0,
-                str_contains($damageType, 'pothole') || str_contains($damageType, 'lubang') => 4.0,
-                str_contains($damageType, 'crack') || str_contains($damageType, 'retak') => 2.8,
-                default => 1.5,
+                str_contains($damageType, 'landslide') || str_contains($damageType, 'longsor') => 4.6,
+                str_contains($damageType, 'pothole') || str_contains($damageType, 'lubang') => 3.8,
+                str_contains($damageType, 'crack') || str_contains($damageType, 'retak') => 2.6,
+                default => 1.0,
             };
 
             $c2Safety = match (true) {
-                str_contains($damageType, 'landslide') || str_contains($damageType, 'longsor') => 5.0,
-                str_contains($damageType, 'pothole') || str_contains($damageType, 'lubang') => 4.2,
-                str_contains($damageType, 'crack') || str_contains($damageType, 'retak') => 2.8,
-                default => 1.5,
+                str_contains($damageType, 'landslide') || str_contains($damageType, 'longsor') => 4.6,
+                str_contains($damageType, 'pothole') || str_contains($damageType, 'lubang') => 3.8,
+                str_contains($damageType, 'crack') || str_contains($damageType, 'retak') => 2.4,
+                default => 1.0,
             };
 
-            $c7Impact = match (true) {
-                str_contains($damageType, 'landslide') || str_contains($damageType, 'longsor') => 5.0,
-                str_contains($damageType, 'pothole') || str_contains($damageType, 'lubang') => 4.0,
-                str_contains($damageType, 'crack') || str_contains($damageType, 'retak') => 2.8,
-                default => 1.5,
-            };
+            $c7Impact = $c1Scale;
         }
+
+        $c3ReportCount = (float) min(10.0, $sameRoadCount);
+        $c4PendingDays = (float) $pendingDays;
 
         if ($report->assessment) {
             if (!$report->assessment->evaluated_by) {
                 $report->assessment->update([
                     'c1_damage_scale' => $c1Scale,
                     'c2_user_safety' => $c2Safety,
+                    'c4_report_count' => $c3ReportCount,
                     'c7_community_impact' => $c7Impact,
-                    'c8_pending_days' => $pendingDays,
+                    'c8_pending_days' => $c4PendingDays,
                 ]);
             }
             return $report->assessment;
@@ -279,11 +291,11 @@ class TopsisService
             'c1_damage_scale' => $c1Scale,
             'c2_user_safety' => $c2Safety,
             'c3_traffic_volume' => 3.5,
-            'c4_report_count' => 1,
+            'c4_report_count' => $c3ReportCount,
             'c5_road_function' => 3.0,
             'c6_facility_proximity' => 3.0,
             'c7_community_impact' => $c7Impact,
-            'c8_pending_days' => $pendingDays,
+            'c8_pending_days' => $c4PendingDays,
         ]);
     }
 
