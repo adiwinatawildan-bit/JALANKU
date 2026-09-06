@@ -209,7 +209,7 @@ class AdminController extends Controller
 
     public function reports(Request $request)
     {
-        $query = Report::with(['user', 'location', 'photos', 'opd', 'priorityResult', 'damageDetections']);
+        $query = Report::with(['user', 'location', 'photos', 'opd', 'priorityResult', 'damageDetections', 'duplicateOf', 'duplicates']);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -253,7 +253,8 @@ class AdminController extends Controller
             'assessment',
             'priorityResult',
             'opd',
-            'duplicates'
+            'duplicateOf',
+            'duplicates.user'
         ])->findOrFail($id);
 
         $opds = Opd::where('is_active', true)->get();

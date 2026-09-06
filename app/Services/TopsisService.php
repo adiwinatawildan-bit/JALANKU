@@ -284,7 +284,8 @@ class TopsisService
             $c7Impact = $c1Scale;
         }
 
-        $c3ReportCount = (float) min(10.0, $sameRoadCount);
+        $clusterDuplicatesCount = $report->duplicates()->count();
+        $c3ReportCount = (float) min(10.0, max($sameRoadCount, 1 + $clusterDuplicatesCount));
         $c4PendingDays = (float) $pendingDays;
 
         if ($report->assessment) {

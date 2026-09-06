@@ -17,6 +17,26 @@
         </div>
     </div>
 
+    @if($report->status === \App\Models\Report::STATUS_DUPLIKAT)
+        <div class="bg-purple-50 border border-purple-200 rounded-3xl p-5 flex items-start space-x-3.5 text-purple-900 shadow-sm">
+            <div class="w-9 h-9 rounded-2xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="text-xs">
+                <h4 class="font-bold text-sm text-purple-900">Laporan Anda Telah Tergabung (Dukungan Warga)</h4>
+                <p class="text-purple-700 mt-1 leading-relaxed">
+                    Titik kerusakan jalan ini juga dilaporkan oleh warga lainnya. Laporan Anda secara otomatis digabungkan dengan laporan utama 
+                    @if($report->duplicateOf)
+                        (<strong>#{{ $report->duplicateOf->ticket_number }}</strong>).
+                    @else
+                        di lokasi yang sama.
+                    @endif
+                    Akumulasi laporan dari Anda dan warga sekitar sangat membantu menaikkan prioritas penanganan perbaikan jalan ini oleh pemerintah daerah!
+                </p>
+            </div>
+        </div>
+    @endif
+
     <!-- Overview Banner -->
     <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

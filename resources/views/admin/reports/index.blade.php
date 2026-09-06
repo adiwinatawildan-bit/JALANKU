@@ -85,14 +85,29 @@
                             <td class="py-4 px-3">
                                 <span class="font-bold text-navy-900 block">{{ $report->road_name }}</span>
                                 <span class="text-[11px] text-slate-500">{{ $report->kecamatan }} • {{ $report->damage_type_label }}</span>
+                                @if($report->duplicates && $report->duplicates->isNotEmpty())
+                                    <span class="inline-flex items-center space-x-1 text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 mt-1 font-bold">
+                                        <i class="fa-solid fa-users text-[9px]"></i>
+                                        <span>+{{ $report->duplicates->count() }} Aduan Warga Serupa</span>
+                                    </span>
+                                @endif
                             </td>
                             <td class="py-4 px-3">
                                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold {{ $report->status_badge_class }} border">
                                     {{ $report->status }}
                                 </span>
+                                @if($report->status === \App\Models\Report::STATUS_DUPLIKAT && $report->duplicateOf)
+                                    <a href="{{ route('admin.reports.show', $report->duplicate_of_id) }}" class="text-[10px] text-purple-600 hover:text-purple-800 font-semibold block mt-1 hover:underline" title="Klik untuk membuka laporan utama">
+                                        <i class="fa-solid fa-copy mr-0.5"></i> Duplikat dari #{{ $report->duplicateOf->ticket_number }}
+                                    </a>
+                                @endif
                             </td>
                             <td class="py-4 px-3">
-                                @if($report->priorityResult)
+                                @if($report->status === \App\Models\Report::STATUS_DUPLIKAT && $report->duplicateOf)
+                                    <span class="text-[11px] text-purple-600 font-medium italic">
+                                        Tergabung ke #{{ $report->duplicateOf->ticket_number }}
+                                    </span>
+                                @elseif($report->priorityResult)
                                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $report->priorityResult->badge_class }} border">
                                         {{ $report->priorityResult->priority_level }} ({{ $report->priorityResult->score }})
                                     </span>
@@ -142,7 +157,11 @@
                         <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $report->status_badge_class }} border">
                             {{ $report->status }}
                         </span>
-                        @if($report->priorityResult)
+                        @if($report->status === \App\Models\Report::STATUS_DUPLIKAT && $report->duplicateOf)
+                            <span class="text-[10px] text-purple-600 font-semibold">
+                                (Duplikat dari #{{ $report->duplicateOf->ticket_number }})
+                            </span>
+                        @elseif($report->priorityResult)
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $report->priorityResult->badge_class }} border">
                                 {{ $report->priorityResult->priority_level }}
                             </span>

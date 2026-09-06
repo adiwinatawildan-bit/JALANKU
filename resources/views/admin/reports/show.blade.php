@@ -63,6 +63,60 @@
         </div>
     </div>
 
+    @if($report->status === \App\Models\Report::STATUS_DUPLIKAT)
+        <div class="bg-purple-50 border border-purple-200 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-purple-900 shadow-sm">
+            <div class="flex items-center space-x-3.5">
+                <div class="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center font-bold text-base shrink-0">
+                    <i class="fa-solid fa-copy"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm">Laporan Ini Terdeteksi Sebagai Duplikat Otomatis</h4>
+                    <p class="text-xs text-purple-700 mt-0.5">
+                        Titik lokasi GPS sama/berdekatan dengan Laporan Utama 
+                        @if($report->duplicateOf)
+                            <strong>#{{ $report->duplicateOf->ticket_number }}</strong> ({{ $report->duplicateOf->road_name }}). Seluruh penilaian TOPSIS dipusatkan pada laporan utama tersebut.
+                        @else
+                            laporan lain.
+                        @endif
+                    </p>
+                </div>
+            </div>
+            @if($report->duplicate_of_id)
+                <a href="{{ route('admin.reports.show', $report->duplicate_of_id) }}" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 inline-flex items-center space-x-1.5">
+                    <span>Buka Laporan Utama</span>
+                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </a>
+            @endif
+        </div>
+    @endif
+
+    @if($report->duplicates && $report->duplicates->isNotEmpty())
+        <div class="bg-white rounded-3xl border border-purple-200 shadow-sm p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-sm font-bold text-navy-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-users text-purple-600"></i>
+                    <span>Akumulasi Aduan Warga di Titik Ini ({{ $report->duplicates->count() }} Laporan Tambahan)</span>
+                </h3>
+                <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                    Menaikkan Prioritas TOPSIS
+                </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                @foreach($report->duplicates as $dup)
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs hover:bg-slate-100/70 transition">
+                        <div>
+                            <span class="font-mono font-bold text-purple-700">#{{ $dup->ticket_number }}</span>
+                            <span class="text-[11px] text-slate-500 block mt-0.5">oleh {{ $dup->user->name ?? 'Masyarakat' }} • {{ $dup->created_at->translatedFormat('d M Y, H:i') }}</span>
+                        </div>
+                        <a href="{{ route('admin.reports.show', $dup->id) }}" class="px-3 py-1 bg-white hover:bg-purple-50 text-purple-700 font-bold text-[11px] rounded-lg border border-purple-200 transition">
+                            Periksa &rarr;
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <!-- Main 2-Column Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         

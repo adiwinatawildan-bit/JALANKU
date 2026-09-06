@@ -132,8 +132,51 @@ class ReportController extends Controller
 
         $ticketNumber = 'JLK-' . date('Ym') . '-' . strtoupper(Str::random(5));
 
+        // Auto-detect duplicate report if within ~35 meters (or ~50m on same road)
+        $lat = (float) $validated['latitude'];
+        $lng = (float) $validated['longitude'];
+
+        $candidateLocations = Location::whereBetween('latitude', [$lat - 0.0006, $lat + 0.0006])
+            ->whereBetween('longitude', [$lng - 0.0006, $lng + 0.0006])
+            ->whereHas('report', function ($q) {
+                $q->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT, Report::STATUS_SELESAI]);
+            })
+            ->with(['report.duplicateOf'])
+            ->get();
+
+        $parentReport = null;
+        $minDistance = null;
+
+        foreach ($candidateLocations as $cand) {
+            if (!$cand->report) continue;
+
+            $dLat = deg2rad($cand->latitude - $lat);
+            $dLon = deg2rad($cand->longitude - $lng);
+            $a = sin($dLat / 2) * sin($dLat / 2) +
+                 cos(deg2rad($lat)) * cos(deg2rad($cand->latitude)) *
+                 sin($dLon / 2) * sin($dLon / 2);
+            $distance = 6371000 * 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+            $isSameRoad = strtolower(trim($cand->report->road_name)) === strtolower(trim($validated['road_name']));
+
+            if ($distance <= 35.0 || ($distance <= 50.0 && $isSameRoad)) {
+                if ($minDistance === null || $distance < $minDistance) {
+                    $minDistance = $distance;
+                    $parentReport = $cand->report->duplicate_of_id ? $cand->report->duplicateOf : $cand->report;
+                }
+            }
+        }
+
         // 1. Create Report in DB quickly
-        $report = DB::transaction(function () use ($validated, $user, $ticketNumber) {
+        $report = DB::transaction(function () use ($validated, $user, $ticketNumber, $parentReport, $minDistance) {
+            $clusterId = null;
+            if ($parentReport) {
+                $clusterId = $parentReport->cluster_id ?: ('CLS-' . $parentReport->id);
+                if (!$parentReport->cluster_id) {
+                    $parentReport->update(['cluster_id' => $clusterId]);
+                }
+            }
+
             $report = Report::create([
                 'ticket_number' => $ticketNumber,
                 'user_id' => $user->id,
@@ -145,7 +188,9 @@ class ReportController extends Controller
                 'damage_type' => $validated['damage_type'] ?? 'menunggu_analisis',
                 'disturbance_level' => $validated['disturbance_level'] ?? 'sedang',
                 'additional_info' => $validated['additional_info'] ?? null,
-                'status' => Report::STATUS_DIAJUKAN,
+                'status' => $parentReport ? Report::STATUS_DUPLIKAT : Report::STATUS_DIAJUKAN,
+                'duplicate_of_id' => $parentReport?->id,
+                'cluster_id' => $clusterId,
                 'is_public' => true,
             ]);
 
@@ -159,13 +204,21 @@ class ReportController extends Controller
                 'desa' => $validated['desa'],
             ]);
 
+            $notes = $parentReport
+                ? "Sistem Otomatis: Terdeteksi duplikat dari laporan #{$parentReport->ticket_number} (Jarak GPS ~" . round($minDistance ?? 0) . "m). Otomatis digabung untuk mempercepat prioritas perbaikan."
+                : 'Laporan diajukan oleh masyarakat via portal web.';
+
             ReportStatusHistory::create([
                 'report_id' => $report->id,
                 'from_status' => null,
-                'to_status' => Report::STATUS_DIAJUKAN,
-                'notes' => 'Laporan diajukan oleh masyarakat via portal web.',
+                'to_status' => $report->status,
+                'notes' => $notes,
                 'changed_by' => $user->id,
             ]);
+
+            if ($parentReport && $parentReport->assessment) {
+                $parentReport->assessment->increment('c4_report_count');
+            }
 
             return $report;
         });
@@ -219,38 +272,50 @@ class ReportController extends Controller
 
         // 4. Notify user & admin
         try {
+            $userMsg = $parentReport
+                ? "Laporan Anda (#{$ticketNumber}) di {$report->road_name} telah diterima dan otomatis digabungkan dengan laporan serupa (#{$parentReport->ticket_number}) untuk memperkuat urgensi perbaikan jalan."
+                : "Laporan Anda (#{$ticketNumber}) di {$report->road_name} telah diterima dan sedang menunggu verifikasi admin.";
+
             Notification::create([
                 'user_id' => $user->id,
                 'type' => 'success',
-                'title' => 'Laporan Berhasil Diajukan',
-                'message' => "Laporan Anda (#{$ticketNumber}) di {$report->road_name} telah diterima dan sedang menunggu verifikasi admin.",
+                'title' => $parentReport ? 'Laporan Berhasil Digabungkan' : 'Laporan Berhasil Diajukan',
+                'message' => $userMsg,
                 'link_url' => route('masyarakat.reports.show', $report->id),
             ]);
 
             $admins = User::whereHas('role', fn($q) => $q->where('name', 'admin'))->get();
+            $adminMsg = $parentReport
+                ? "Laporan baru #{$ticketNumber} otomatis digabungkan sebagai duplikat dari #{$parentReport->ticket_number} (lokasi GPS berdekatan)."
+                : "Laporan baru #{$ticketNumber} di {$report->road_name} membutuhkan verifikasi.";
+
             foreach ($admins as $admin) {
                 Notification::create([
                     'user_id' => $admin->id,
                     'type' => 'info',
-                    'title' => 'Laporan Baru Masuk',
-                    'message' => "Laporan baru #{$ticketNumber} di {$report->road_name} membutuhkan verifikasi.",
+                    'title' => $parentReport ? 'Laporan Duplikat Otomatis' : 'Laporan Baru Masuk',
+                    'message' => $adminMsg,
                     'link_url' => route('admin.reports.show', $report->id),
                 ]);
             }
 
             AuditLog::record(
-                activity: "Pengaduan Baru #{$ticketNumber}",
+                activity: $parentReport ? "Pengaduan Duplikat Otomatis #{$ticketNumber}" : "Pengaduan Baru #{$ticketNumber}",
                 targetType: 'Report',
                 targetId: $report->id,
-                description: "Masyarakat {$user->name} membuat laporan kerusakan jalan di {$report->road_name}.",
+                description: "Masyarakat {$user->name} membuat laporan kerusakan jalan di {$report->road_name}." . ($parentReport ? " (Tergabung ke #{$parentReport->ticket_number})" : ""),
                 userId: $user->id
             );
         } catch (\Throwable $e) {
             Log::warning('Notification/Audit notice: ' . $e->getMessage());
         }
 
+        $successMsg = $parentReport
+            ? "Laporan Anda dengan nomor tiket {$ticketNumber} berhasil dikirim! Karena berada di titik yang sama dengan laporan #{$parentReport->ticket_number}, laporan Anda otomatis digabungkan untuk mempercepat prioritas perbaikan jalan."
+            : "Laporan Anda dengan nomor tiket {$ticketNumber} berhasil dikirim dan sedang diproses!";
+
         return redirect()->route('masyarakat.reports.show', $report->id)
-            ->with('success', "Laporan Anda dengan nomor tiket {$ticketNumber} berhasil dikirim dan sedang diproses!");
+            ->with('success', $successMsg);
     }
 
     public function show($id)
@@ -264,7 +329,9 @@ class ReportController extends Controller
             'statusHistories.changer',
             'damageDetections',
             'opd',
-            'priorityResult'
+            'priorityResult',
+            'duplicateOf',
+            'duplicates'
         ])->where('user_id', $user->id)->findOrFail($id);
 
         return view('masyarakat.reports.show', compact('report'));
