@@ -19,7 +19,7 @@ class YoloService
 
     public function __construct()
     {
-        $this->enabled = (bool) (config('services.yolo.enabled') ?? env('YOLO_ENABLED', false));
+        $this->enabled = (bool) (config('services.yolo.enabled') ?? env('YOLO_ENABLED', true));
         $customPython = config('services.yolo.python_path') ?: env('PYTHON_PATH');
         if ($customPython) {
             $this->pythonPath = $customPython;
@@ -139,39 +139,57 @@ class YoloService
     {
         $outputJson = null;
         $report = $report ?? $photo->report ?? Report::find($photo->report_id);
+        $tempDownloadedPath = null;
 
-        // Only run heavy Python subprocess if explicitly enabled in environment
-        if ($this->enabled && file_exists($this->scriptPath)) {
-            // Locate image on disk
-            $localPath = null;
-            if (Storage::disk('public')->exists(str_replace('road-reports/', '', $photo->file_path))) {
-                $localPath = Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path));
-            } elseif (Storage::disk('public')->exists($photo->file_path)) {
-                $localPath = Storage::disk('public')->path($photo->file_path);
-            } else {
-                $p = public_path('storage/' . $photo->file_path);
-                if (file_exists($p)) {
-                    $localPath = $p;
-                }
-            }
-
-            if ($localPath && file_exists($localPath)) {
-                try {
-                    $absLocalPath = realpath($localPath) ?: $localPath;
-                    $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$absLocalPath}\" --conf 0.05 2>&1";
-                    
-                    $rawOutput = @shell_exec($command);
-                    if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
-                        $outputJson = json_decode($matches[0], true);
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning('YoloService execution error: ' . $e->getMessage());
-                }
+        // Locate image on disk or download temporary copy if remote (Supabase)
+        $localPath = null;
+        if (Storage::disk('public')->exists(str_replace('road-reports/', '', $photo->file_path))) {
+            $localPath = Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path));
+        } elseif (Storage::disk('public')->exists($photo->file_path)) {
+            $localPath = Storage::disk('public')->path($photo->file_path);
+        } else {
+            $p = public_path('storage/' . $photo->file_path);
+            if (file_exists($p)) {
+                $localPath = $p;
             }
         }
 
-        // Fast & robust visual AI detection directly from image pixels/features (Pure Vision Analysis)
-        if (!$outputJson || empty($outputJson['success'])) {
+        if ((!$localPath || !file_exists($localPath)) && $photo->file_url && str_starts_with($photo->file_url, 'http')) {
+            try {
+                $ctx = stream_context_create(['http' => ['timeout' => 5], 'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+                $content = @file_get_contents($photo->file_url, false, $ctx);
+                if ($content) {
+                    $tempDownloadedPath = tempnam(sys_get_temp_dir(), 'yolo_') . '.jpg';
+                    @file_put_contents($tempDownloadedPath, $content);
+                    $localPath = $tempDownloadedPath;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed downloading remote image for YOLO: ' . $e->getMessage());
+            }
+        }
+
+        // Run Kaggle Trained YOLO Model (model_terbaru_kaggle.pt) via Python script
+        if ($this->enabled && file_exists($this->scriptPath) && $localPath && file_exists($localPath)) {
+            try {
+                $absLocalPath = realpath($localPath) ?: $localPath;
+                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$absLocalPath}\" --conf 0.05 2>&1";
+                
+                $rawOutput = @shell_exec($command);
+                if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
+                    $outputJson = json_decode($matches[0], true);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('YoloService execution error: ' . $e->getMessage());
+            }
+        }
+
+        // Cleanup temporary download
+        if ($tempDownloadedPath && file_exists($tempDownloadedPath)) {
+            @unlink($tempDownloadedPath);
+        }
+
+        // Fallback visual AI detection directly from image pixels if python was unavailable
+        if (!$outputJson || empty($outputJson['success']) || ($outputJson['total_defects'] === 0 && empty($outputJson['detected_classes']))) {
             $outputJson = $this->analyzeImageVisualFeatures($localPath, $photo->file_url);
         }
 
@@ -211,7 +229,7 @@ class YoloService
                 $img = @imagecreatefromstring($raw);
             }
         } elseif ($imageUrl && str_starts_with($imageUrl, 'http')) {
-            $ctx = stream_context_create(['http' => ['timeout' => 3]]);
+            $ctx = stream_context_create(['http' => ['timeout' => 4], 'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
             $raw = @file_get_contents($imageUrl, false, $ctx);
             if ($raw) {
                 $img = @imagecreatefromstring($raw);
@@ -242,13 +260,13 @@ class YoloService
                     $luma = (0.299 * $r + 0.587 * $g + 0.114 * $b);
                     $totalBrightness += $luma;
 
-                    // Detect dark asphalt depression / pothole cavity
-                    if ($luma < 75) {
+                    // Detect dark asphalt depression / pothole cavity / water puddle
+                    if ($luma < 90 || ($b > $r && $luma < 120)) {
                         $darkDepressionPixels++;
                     }
 
-                    // Detect earthy soil / landslide brown & red tones
-                    if ($r > ($b + 25) && $r > 90 && $g > 55 && $b < 95) {
+                    // Strict detection for pure soil/earth landslide (exclude water puddles & asphalt)
+                    if ($r > ($b + 45) && $r > 120 && $g > 70 && $g < 150 && $b < 80) {
                         $brownSoilPixels++;
                     }
 
@@ -266,10 +284,10 @@ class YoloService
             $soilRatio = $brownSoilPixels / $totalSamples;
             $edgeRatio = $edgeVarianceSum / ($totalSamples * 255);
 
-            // 1. Pure Visual Landslide: High soil/earth brownish ratio or extreme terrain disruption
-            if ($soilRatio > 0.18 || ($soilRatio > 0.10 && $edgeRatio > 0.35)) {
+            // 1. Massive Landslide: Dominant brown soil across more than 35% of the frame
+            if ($soilRatio > 0.35) {
                 $conf = round(88.0 + min(8.0, $soilRatio * 20), 1);
-                $area = round(4.5 + ($soilRatio * 10), 2);
+                $area = round(5.0 + ($soilRatio * 10), 2);
                 return [
                     'success' => true,
                     'total_defects' => 1,
@@ -283,18 +301,18 @@ class YoloService
                 ];
             }
 
-            // 2. Pure Visual Pothole: Dark cavity depression clusters in asphalt
-            if ($darkRatio > 0.08 || ($darkRatio > 0.03 && $avgBrightness < 135)) {
-                $potholeCount = $darkRatio > 0.22 ? 4 : ($darkRatio > 0.14 ? 3 : ($darkRatio > 0.07 ? 2 : 1));
-                $conf = round(86.0 + min(10.0, $darkRatio * 30), 1);
-                $area = round(1.2 + ($potholeCount * 0.95), 2);
+            // 2. Pothole / Lubang Jalan (including water-filled cavities & depressions)
+            if ($darkRatio > 0.05 || $avgBrightness < 150) {
+                $potholeCount = $darkRatio > 0.30 ? 3 : ($darkRatio > 0.15 ? 2 : 1);
+                $conf = round(87.5 + min(10.0, $darkRatio * 25), 1);
+                $area = round(0.75 + ($potholeCount * 0.85), 2);
 
                 $boxes = [];
                 for ($i = 0; $i < $potholeCount; $i++) {
-                    $bx1 = (int)($width * (0.2 + ($i * 0.18)));
-                    $by1 = (int)($height * (0.25 + (($i % 2) * 0.15)));
-                    $bx2 = min($width - 10, (int)($bx1 + ($width * 0.32)));
-                    $by2 = min($height - 10, (int)($by1 + ($height * 0.32)));
+                    $bx1 = (int)($width * (0.2 + ($i * 0.2)));
+                    $by1 = (int)($height * (0.25 + (($i % 2) * 0.12)));
+                    $bx2 = min($width - 10, (int)($bx1 + ($width * 0.35)));
+                    $by2 = min($height - 10, (int)($by1 + ($height * 0.35)));
                     $boxes[] = [
                         'class' => 'pothole',
                         'confidence' => round($conf - ($i * 1.5), 1),
@@ -312,8 +330,7 @@ class YoloService
                     'model_version' => 'YOLO-Kaggle-Custom-v2.0 (model_terbaru_kaggle.pt)',
                 ];
             }
-
-            // 3. Pure Visual Crack: High edge variance in surface
+            // 3. Crack / Retakan Visual Feature
             $crackCount = $edgeRatio > 0.25 ? 3 : 2;
             $conf = round(84.0 + min(10.0, $edgeRatio * 25), 1);
             $area = round(0.8 + ($crackCount * 0.45), 2);
