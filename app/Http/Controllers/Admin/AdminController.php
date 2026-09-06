@@ -97,6 +97,15 @@ class AdminController extends Controller
             $yearExpr = "DATE_FORMAT(created_at, '%Y')";
         }
 
+        $viewMode = request('view', 'month');
+        $selectedMonth = request('month', date('Y-m'));
+        if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
+            $selectedMonth = date('Y-m');
+        }
+        [$selectedYear, $selectedMonthNum] = explode('-', $selectedMonth);
+        $selectedYear = (int) $selectedYear;
+        $selectedMonthNum = (int) $selectedMonthNum;
+
         $availableYears = Report::select(DB::raw("{$yearExpr} as year"))
             ->distinct()
             ->orderBy('year', 'desc')
@@ -106,27 +115,63 @@ class AdminController extends Controller
             ->toArray();
 
         if (empty($availableYears)) {
-            $availableYears = [date('Y')];
+            $availableYears = [(string) date('Y')];
         }
 
-        $selectedYear = request('year', $availableYears[0] ?? date('Y'));
+        if ($viewMode === 'year') {
+            $yearChosen = (int) request('year', $selectedYear);
+            $rawMonths = Report::select(
+                    DB::raw("{$monthExpr} as month"),
+                    DB::raw('count(*) as count')
+                )
+                ->whereYear('created_at', $yearChosen)
+                ->groupBy(DB::raw($monthExpr))
+                ->pluck('count', 'month')
+                ->toArray();
 
-        $monthlyQuery = Report::select(
-                DB::raw("{$monthExpr} as month"),
-                DB::raw('count(*) as count')
-            );
-
-        if ($driver === 'sqlite') {
-            $monthlyQuery->whereRaw("strftime('%Y', created_at) = ?", [$selectedYear]);
-        } elseif ($driver === 'pgsql') {
-            $monthlyQuery->whereRaw("TO_CHAR(created_at, 'YYYY') = ?", [$selectedYear]);
+            $monthlyData = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $mStr = sprintf('%04d-%02d', $yearChosen, $m);
+                $label = \Carbon\Carbon::createFromDate($yearChosen, $m, 1)->translatedFormat('M');
+                $monthlyData[] = [
+                    'month' => $label,
+                    'count' => (int) ($rawMonths[$mStr] ?? 0),
+                ];
+            }
+            $chartTitle = "Tren Laporan Bulanan (Tahun {$yearChosen})";
         } else {
-            $monthlyQuery->whereRaw("DATE_FORMAT(created_at, '%Y') = ?", [$selectedYear]);
-        }
+            // Calendar month breakdown (by days)
+            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $selectedMonthNum, $selectedYear);
 
-        $monthlyData = $monthlyQuery->groupBy(DB::raw($monthExpr))
-            ->orderBy(DB::raw($monthExpr), 'asc')
-            ->get();
+            if ($driver === 'sqlite') {
+                $dayExpr = "strftime('%Y-%m-%d', created_at)";
+            } elseif ($driver === 'pgsql') {
+                $dayExpr = "TO_CHAR(created_at, 'YYYY-MM-DD')";
+            } else {
+                $dayExpr = "DATE_FORMAT(created_at, '%Y-%m-%d')";
+            }
+
+            $rawDays = Report::select(
+                    DB::raw("{$dayExpr} as day"),
+                    DB::raw('count(*) as count')
+                )
+                ->whereYear('created_at', $selectedYear)
+                ->whereMonth('created_at', $selectedMonthNum)
+                ->groupBy(DB::raw($dayExpr))
+                ->pluck('count', 'day')
+                ->toArray();
+
+            $monthlyData = [];
+            $mName = \Carbon\Carbon::createFromDate($selectedYear, $selectedMonthNum, 1)->translatedFormat('M');
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $dayStr = sprintf('%04d-%02d-%02d', $selectedYear, $selectedMonthNum, $d);
+                $monthlyData[] = [
+                    'month' => sprintf('%02d %s', $d, $mName),
+                    'count' => (int) ($rawDays[$dayStr] ?? 0),
+                ];
+            }
+            $chartTitle = "Tren Laporan Harian (" . \Carbon\Carbon::createFromDate($selectedYear, $selectedMonthNum, 1)->translatedFormat('F Y') . ")";
+        }
 
         $rawDamageTypeData = Report::select('damage_type', DB::raw('count(*) as count'))
             ->groupBy('damage_type')
@@ -155,7 +200,10 @@ class AdminController extends Controller
             'damageTypeData',
             'opdList',
             'availableYears',
-            'selectedYear'
+            'selectedYear',
+            'selectedMonth',
+            'viewMode',
+            'chartTitle'
         ));
     }
 

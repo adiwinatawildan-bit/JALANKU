@@ -290,19 +290,28 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Monthly Chart -->
         <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <h3 class="text-sm font-bold text-navy-900 flex items-center">
-                    <i class="fa-solid fa-chart-area text-amber-500 mr-2"></i> Tren Laporan Masuk Per Bulan
+                    <i class="fa-solid fa-chart-area text-amber-500 mr-2"></i> {{ $chartTitle ?? 'Tren Laporan Masuk' }}
                 </h3>
-                @if(isset($availableYears) && count($availableYears) > 0)
-                    <form method="GET" action="{{ route('admin.dashboard') }}" class="inline-block">
-                        <select name="year" onchange="this.form.submit()" class="px-2.5 py-1 text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500">
-                            @foreach($availableYears as $yr)
-                                <option value="{{ $yr }}" {{ ($selectedYear ?? '') == $yr ? 'selected' : '' }}>Tahun {{ $yr }}</option>
-                            @endforeach
-                        </select>
-                    </form>
-                @endif
+                <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center space-x-2">
+                    <input type="hidden" name="view" value="{{ $viewMode }}">
+                    <div class="relative flex items-center">
+                        <input type="month" name="month" value="{{ $selectedMonth }}" onchange="this.form.submit()" 
+                            class="px-2.5 py-1 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm"
+                            title="Pilih Bulan & Tahun dari Kalender">
+                    </div>
+                    <div class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[10px] font-bold">
+                        <a href="{{ route('admin.dashboard', ['view' => 'month', 'month' => $selectedMonth]) }}" 
+                           class="px-2 py-0.5 rounded-md transition {{ $viewMode === 'month' ? 'bg-white text-navy-950 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
+                            Harian
+                        </a>
+                        <a href="{{ route('admin.dashboard', ['view' => 'year', 'year' => $selectedYear, 'month' => $selectedMonth]) }}" 
+                           class="px-2 py-0.5 rounded-md transition {{ $viewMode === 'year' ? 'bg-white text-navy-950 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
+                            12 Bulan
+                        </a>
+                    </div>
+                </form>
             </div>
             <div id="admin-chart-monthly" class="h-64"></div>
         </div>

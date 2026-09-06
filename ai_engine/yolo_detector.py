@@ -66,8 +66,16 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[s
     }
 
     try:
-        # Suppress ultralytics banner during import and predict
+        # Suppress ultralytics banner and limit thread usage to prevent OOM on cloud containers
         os.environ["YOLO_VERBOSE"] = "False"
+        os.environ["OMP_NUM_THREADS"] = "1"
+        os.environ["OPENBLAS_NUM_THREADS"] = "1"
+        os.environ["MKL_NUM_THREADS"] = "1"
+
+        import torch
+        torch.set_num_threads(1)
+        torch.set_grad_enabled(False)
+
         from ultralytics import YOLO
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -83,8 +91,8 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[s
 
         model = YOLO(model_path)
         
-        # Predict with custom trained weights
-        detections = model.predict(target_image_path, conf=confidence_threshold, verbose=False)
+        # Predict with custom trained weights (CPU, max 10 detections, imgsz 640)
+        detections = model.predict(target_image_path, conf=confidence_threshold, verbose=False, imgsz=640, max_det=10)
 
         potholes = 0
         cracks = 0

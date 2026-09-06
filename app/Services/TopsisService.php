@@ -205,8 +205,22 @@ class TopsisService
         $hours = max(1, (int) $report->created_at->diffInHours(now()));
         $pendingDays = max(1.0, round($hours / 24.0, 1));
 
-        // Count community reports on the same road (Crowdsourcing / C3)
-        $sameRoadCount = max(1, Report::where('road_name', $report->road_name)->count());
+        // Count community reports on the same road (Crowdsourcing / C3) with fuzzy road matching for minor typos
+        $targetRoad = strtolower(trim(preg_replace('/\s+/', ' ', (string) $report->road_name)));
+        $allRoads = Report::pluck('road_name')->toArray();
+        $sameRoadCount = 0;
+        foreach ($allRoads as $road) {
+            $clean = strtolower(trim(preg_replace('/\s+/', ' ', (string) $road)));
+            if ($clean === $targetRoad) {
+                $sameRoadCount++;
+            } else {
+                similar_text($clean, $targetRoad, $percent);
+                if ($percent >= 85) {
+                    $sameRoadCount++;
+                }
+            }
+        }
+        $sameRoadCount = max(1, $sameRoadCount);
 
         $latestDetection = $report->damageDetections()->latest()->first();
 

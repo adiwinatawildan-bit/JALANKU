@@ -116,7 +116,22 @@ class YoloService
 
         $hours = max(1, (int) $report->created_at->diffInHours(now()));
         $pendingDays = max(1.0, round($hours / 24.0, 1));
-        $sameRoadCount = max(1, Report::where('road_name', $report->road_name)->count());
+        
+        $targetRoad = strtolower(trim(preg_replace('/\s+/', ' ', (string) $report->road_name)));
+        $allRoads = Report::pluck('road_name')->toArray();
+        $sameRoadCount = 0;
+        foreach ($allRoads as $road) {
+            $clean = strtolower(trim(preg_replace('/\s+/', ' ', (string) $road)));
+            if ($clean === $targetRoad) {
+                $sameRoadCount++;
+            } else {
+                similar_text($clean, $targetRoad, $percent);
+                if ($percent >= 85) {
+                    $sameRoadCount++;
+                }
+            }
+        }
+        $sameRoadCount = max(1, $sameRoadCount);
 
         RoadAssessment::updateOrCreate(
             ['report_id' => $report->id],
@@ -172,8 +187,25 @@ class YoloService
             $imageTarget = null;
             $tempDownloaded = false;
 
-            // PRIORITY 1: Always use canonical photo file_url (Supabase cloud storage) so YOLO analyzes the exact photo the user sees!
-            if (!empty($photo->file_url) && str_starts_with($photo->file_url, 'http')) {
+            $candidatePaths = [
+                Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
+                Storage::disk('public')->path($photo->file_path),
+                public_path('storage/' . $photo->file_path),
+                public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
+                storage_path('app/public/' . $photo->file_path),
+                storage_path('app/public/' . str_replace('road-reports/', '', $photo->file_path)),
+            ];
+
+            // PRIORITY 1: If a freshly uploaded local copy exists (within last 10 minutes), use it directly (instant zero network latency)
+            foreach ($candidatePaths as $p) {
+                if (file_exists($p) && is_file($p) && filesize($p) > 1000 && (time() - filemtime($p)) < 600) {
+                    $imageTarget = $p;
+                    break;
+                }
+            }
+
+            // PRIORITY 2: Otherwise, fetch canonical photo from Supabase storage
+            if (!$imageTarget && !empty($photo->file_url) && str_starts_with($photo->file_url, 'http')) {
                 try {
                     $cacheDir = storage_path('app/public/yolo_cache');
                     if (!file_exists($cacheDir)) {
@@ -184,8 +216,8 @@ class YoloService
                     $ch = curl_init($photo->file_url);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
                     $data = curl_exec($ch);
                     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                     curl_close($ch);
@@ -195,7 +227,6 @@ class YoloService
                         $imageTarget = $cacheFile;
                         $tempDownloaded = true;
                     } else {
-                        // Pass URL directly to detector script
                         $imageTarget = $photo->file_url;
                     }
                 } catch (\Throwable $e) {
@@ -203,17 +234,8 @@ class YoloService
                 }
             }
 
-            // PRIORITY 2: Fallback to local files only if URL is absent or failed
+            // PRIORITY 3: Fallback to existing local files
             if (!$imageTarget) {
-                $candidatePaths = [
-                    Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
-                    Storage::disk('public')->path($photo->file_path),
-                    public_path('storage/' . $photo->file_path),
-                    public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
-                    storage_path('app/public/' . $photo->file_path),
-                    storage_path('app/public/' . str_replace('road-reports/', '', $photo->file_path)),
-                ];
-
                 foreach ($candidatePaths as $p) {
                     if (file_exists($p) && is_file($p) && filesize($p) > 1000) {
                         $imageTarget = $p;
@@ -222,16 +244,23 @@ class YoloService
                 }
             }
 
-            // Execute custom YOLO detector
+            // Execute custom YOLO detector with timeout guard (18s max to prevent Render 502 timeout)
             if ($imageTarget && file_exists($this->scriptPath)) {
                 try {
-                    $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$imageTarget}\" --conf 0.15 2>&1";
-                    $rawOutput = @shell_exec($command);
+                    $process = Process::timeout(18)->run([
+                        $this->pythonPath,
+                        $this->scriptPath,
+                        '--image',
+                        (string) $imageTarget,
+                        '--conf',
+                        '0.15'
+                    ]);
+                    $rawOutput = $process->output();
                     if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
                         $outputJson = json_decode($matches[0], true);
                     }
                 } catch (\Throwable $e) {
-                    Log::warning('YoloService execution error: ' . $e->getMessage());
+                    Log::warning('YoloService execution timeout/notice: ' . $e->getMessage());
                 }
             }
 

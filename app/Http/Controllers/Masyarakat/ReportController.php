@@ -91,6 +91,8 @@ class ReportController extends Controller
 
     public function store(Request $request)
     {
+        @set_time_limit(120);
+
         // 16 & 39. VALIDASI LARAVEL (Maksimal 3 Foto, format JPG, JPEG, PNG, WEBP, maks 5MB)
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
