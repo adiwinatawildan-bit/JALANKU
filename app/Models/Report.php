@@ -189,9 +189,11 @@ class Report extends Model
             'pothole' => 'Lubang (Pothole)',
             'crack', 'retak' => 'Retak (Crack)',
             'landslide', 'amblas' => 'Longsor (Landslide)',
+            'menunggu_analisis', 'pending_ai', 'proses_ai' => 'Menunggu Analisis AI',
+            'normal', 'baik' => 'Normal / Baik',
             'bergelombang' => 'Jalan Bergelombang',
             'drainase' => 'Saluran Drainase',
-            default => ucfirst($this->damage_type ?? 'Lainnya'),
+            default => ucfirst($this->damage_type ?: 'Menunggu Analisis AI'),
         };
     }
 

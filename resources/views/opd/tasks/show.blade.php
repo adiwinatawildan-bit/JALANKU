@@ -40,7 +40,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-100 text-xs">
             <div>
                 <span class="text-slate-400 block font-semibold">Jenis Cacat</span>
-                <span class="font-bold text-navy-900">{{ ucfirst($report->damage_type) }}</span>
+                <span class="font-bold text-navy-900">{{ $report->damage_type_label }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-semibold">Tingkat Gangguan</span>

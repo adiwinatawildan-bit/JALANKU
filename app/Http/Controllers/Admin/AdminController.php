@@ -141,7 +141,7 @@ class AdminController extends Controller
             $chartTitle = "Tren Laporan Bulanan (Tahun {$yearChosen})";
         } else {
             // Calendar month breakdown (by days)
-            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $selectedMonthNum, $selectedYear);
+            $daysInMonth = (int) date('t', strtotime(sprintf('%04d-%02d-01', $selectedYear, $selectedMonthNum)));
 
             if ($driver === 'sqlite') {
                 $dayExpr = "strftime('%Y-%m-%d', created_at)";

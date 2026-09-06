@@ -30,7 +30,7 @@
                         {{ $report->status }}
                     </span>
                     <span class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-amber-300 border border-slate-700">
-                        <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-400"></i> {{ ucfirst($report->damage_type) }} (Tingkat: {{ ucfirst($report->disturbance_level) }})
+                        <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-400"></i> {{ $report->damage_type_label }} @if($report->damage_type !== 'menunggu_analisis')(Tingkat: {{ ucfirst(str_replace('_', ' ', $report->disturbance_level ?? 'Sedang')) }})@endif
                     </span>
                     @if($report->priorityResult)
                         <span class="px-3 py-1 rounded-full text-xs font-semibold {{ $report->priorityResult->badge_class }} border">

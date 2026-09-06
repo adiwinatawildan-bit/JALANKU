@@ -84,7 +84,7 @@
                             </td>
                             <td class="py-4 px-3">
                                 <span class="font-bold text-navy-900 block">{{ $report->road_name }}</span>
-                                <span class="text-[11px] text-slate-500">{{ $report->kecamatan }} • {{ ucfirst($report->damage_type) }}</span>
+                                <span class="text-[11px] text-slate-500">{{ $report->kecamatan }} • {{ $report->damage_type_label }}</span>
                             </td>
                             <td class="py-4 px-3">
                                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold {{ $report->status_badge_class }} border">

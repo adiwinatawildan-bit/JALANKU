@@ -38,7 +38,7 @@
                             </td>
                             <td class="py-4 px-4 font-bold text-navy-900">
                                 {{ $report->road_name }}
-                                <p class="text-[11px] font-normal text-slate-500">{{ $report->kecamatan }} • {{ ucfirst($report->damage_type) }}</p>
+                                <p class="text-[11px] font-normal text-slate-500">{{ $report->kecamatan }} • {{ $report->damage_type_label }}</p>
                             </td>
                             <td class="py-4 px-4 text-slate-600">
                                 {{ $report->created_at->translatedFormat('d M Y, H:i') }}

@@ -121,13 +121,15 @@
                                 Lubang Jalan
                             @elseif($report->damage_type === 'crack')
                                 Retak Jalan
+                            @elseif($report->damage_type === 'menunggu_analisis')
+                                Menunggu Analisis AI
                             @elseif($report->damage_type && !in_array($report->damage_type, ['lainnya', 'other', 'normal']))
                                 {{ ucfirst($report->damage_type) }}
                             @else
                                 Kondisi Baik / Normal
                             @endif
                         </span>
-                        <span class="text-[10px] text-slate-500 block">Tingkat: {{ ucfirst(($detections->isNotEmpty() && $totalDefects === 0) ? 'Rendah' : ($report->disturbance_level ?? 'Rendah')) }}</span>
+                        <span class="text-[10px] text-slate-500 block">Tingkat: {{ $report->damage_type === 'menunggu_analisis' ? 'Menunggu Analisis AI' : ucfirst(($detections->isNotEmpty() && $totalDefects === 0) ? 'Rendah' : ($report->disturbance_level ?? 'Rendah')) }}</span>
                     </div>
                     <div>
                         <span class="text-slate-400 block font-semibold">Koordinat GPS</span>

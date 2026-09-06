@@ -38,11 +38,19 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-100 text-xs">
             <div>
                 <span class="text-slate-400 block font-semibold">Jenis Cacat Jalan</span>
-                <span class="font-bold text-navy-900">{{ ucwords(str_replace('_', ' ', $report->damage_type)) }}</span>
+                <span class="font-bold text-navy-900">
+                    {{ $report->damage_type_label }}
+                </span>
             </div>
             <div>
                 <span class="text-slate-400 block font-semibold">Tingkat Gangguan</span>
-                <span class="font-bold text-navy-900">{{ ucwords(str_replace('_', ' ', $report->disturbance_level)) }}</span>
+                <span class="font-bold text-navy-900">
+                    @if($report->damage_type === 'menunggu_analisis')
+                        Menunggu Analisis AI
+                    @else
+                        {{ ucwords(str_replace('_', ' ', $report->disturbance_level ?? 'Sedang')) }}
+                    @endif
+                </span>
             </div>
             <div>
                 <span class="text-slate-400 block font-semibold">OPD Pelaksana</span>

@@ -116,10 +116,13 @@ class ReportController extends Controller
 
         $user = Auth::user();
 
-        // Anti-duplicate protection: check if same user submitted same title within last 15 seconds
+        // Anti-duplicate protection: check if same user submitted same title or road within last 60 seconds
         $recentReport = Report::where('user_id', $user->id)
-            ->where('title', $validated['title'])
-            ->where('created_at', '>=', now()->subSeconds(15))
+            ->where(function ($q) use ($validated) {
+                $q->where('title', $validated['title'])
+                  ->orWhere('road_name', $validated['road_name']);
+            })
+            ->where('created_at', '>=', now()->subSeconds(60))
             ->first();
 
         if ($recentReport) {
@@ -139,8 +142,8 @@ class ReportController extends Controller
                 'road_name' => $validated['road_name'],
                 'kecamatan' => $validated['kecamatan'],
                 'desa' => $validated['desa'],
-                'damage_type' => $validated['damage_type'] ?? 'normal',
-                'disturbance_level' => $validated['disturbance_level'] ?? 'rendah',
+                'damage_type' => $validated['damage_type'] ?? 'menunggu_analisis',
+                'disturbance_level' => $validated['disturbance_level'] ?? 'sedang',
                 'additional_info' => $validated['additional_info'] ?? null,
                 'status' => Report::STATUS_DIAJUKAN,
                 'is_public' => true,
