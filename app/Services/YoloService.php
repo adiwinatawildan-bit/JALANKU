@@ -143,42 +143,44 @@ class YoloService
         $outputJson = null;
         $report = $report ?? $photo->report ?? Report::find($photo->report_id);
 
-        // 1. Locate or download image to local disk so YOLO can process immediately
         $localPath = null;
-        $candidatePaths = [
-            Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
-            Storage::disk('public')->path($photo->file_path),
-            public_path('storage/' . $photo->file_path),
-            public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
-        ];
+        $tempDownloaded = false;
 
-        foreach ($candidatePaths as $p) {
-            if (file_exists($p) && is_file($p)) {
-                $localPath = $p;
-                break;
-            }
-        }
-
-        // If not found locally, download to local cache from file_url
-        if (!$localPath && !empty($photo->file_url)) {
+        // PRIORITY 1: Always download fresh from Supabase URL when available
+        // This prevents stale local seed data from being used for inference
+        if (!empty($photo->file_url) && str_starts_with($photo->file_url, 'http')) {
             try {
-                $cacheDir = storage_path('app/public/road-reports/reports/' . $photo->report_id . '/initial');
+                $cacheDir = storage_path('app/public/yolo_cache');
                 if (!file_exists($cacheDir)) {
                     @mkdir($cacheDir, 0755, true);
                 }
-                $cacheFile = $cacheDir . '/' . ($photo->file_name ?: 'foto-1.jpg');
+                $cacheFile = $cacheDir . '/report_' . $photo->report_id . '_' . ($photo->file_name ?: 'foto-1.jpg');
 
-                if (file_exists($cacheFile) && filesize($cacheFile) > 0) {
+                $resp = \Illuminate\Support\Facades\Http::timeout(15)->get($photo->file_url);
+                if ($resp->successful()) {
+                    file_put_contents($cacheFile, $resp->body());
                     $localPath = $cacheFile;
-                } else {
-                    $resp = \Illuminate\Support\Facades\Http::timeout(15)->get($photo->file_url);
-                    if ($resp->successful()) {
-                        file_put_contents($cacheFile, $resp->body());
-                        $localPath = $cacheFile;
-                    }
+                    $tempDownloaded = true;
                 }
             } catch (\Throwable $e) {
                 Log::warning('Could not download image from cloud for YOLO: ' . $e->getMessage());
+            }
+        }
+
+        // PRIORITY 2: Fall back to local file only if URL download failed or no URL exists
+        if (!$localPath) {
+            $candidatePaths = [
+                Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
+                Storage::disk('public')->path($photo->file_path),
+                public_path('storage/' . $photo->file_path),
+                public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
+            ];
+
+            foreach ($candidatePaths as $p) {
+                if (file_exists($p) && is_file($p) && filesize($p) > 1000) {
+                    $localPath = $p;
+                    break;
+                }
             }
         }
 
@@ -186,7 +188,7 @@ class YoloService
         if ($localPath && file_exists($localPath) && file_exists($this->scriptPath)) {
             try {
                 $absLocalPath = realpath($localPath) ?: $localPath;
-                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$absLocalPath}\" --conf 0.15 2>&1";
+                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$absLocalPath}\" --conf 0.25 2>&1";
 
                 $rawOutput = @shell_exec($command);
                 if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
@@ -197,10 +199,10 @@ class YoloService
             }
         }
 
-        // 3. Fallback to direct URL if local execution failed or file was inaccessible
+        // 3. Fallback to direct URL if local execution failed
         if ((!$outputJson || empty($outputJson['success'])) && !empty($photo->file_url) && file_exists($this->scriptPath)) {
             try {
-                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$photo->file_url}\" --conf 0.15 2>&1";
+                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$photo->file_url}\" --conf 0.25 2>&1";
                 $rawOutput = @shell_exec($command);
                 if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
                     $outputJson = json_decode($matches[0], true);
@@ -208,6 +210,11 @@ class YoloService
             } catch (\Throwable $e) {
                 Log::warning('YoloService URL execution error: ' . $e->getMessage());
             }
+        }
+
+        // Clean up temp download
+        if ($tempDownloaded && $localPath && file_exists($localPath)) {
+            @unlink($localPath);
         }
 
         // 4. Default to normal/unprocessed only if YOLO engine fails completely (no fabricated defects!)

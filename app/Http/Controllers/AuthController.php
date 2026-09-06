@@ -140,6 +140,11 @@ class AuthController extends Controller
             userId: $user->id
         );
 
+        // Ensure any existing session is completely cleared so user is sent to login, not a dashboard
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('login')->with('success', 'Password akun Anda berhasil diubah! Silakan login menggunakan password baru.');
     }
 
