@@ -19,7 +19,7 @@ class YoloService
 
     public function __construct()
     {
-        $this->enabled = (bool) (config('services.yolo.enabled') ?? env('YOLO_ENABLED', false));
+        $this->enabled = (bool) (config('services.yolo.enabled') ?? env('YOLO_ENABLED', true));
         $customPython = config('services.yolo.python_path') ?: env('PYTHON_PATH');
         if ($customPython) {
             $this->pythonPath = $customPython;
@@ -60,7 +60,7 @@ class YoloService
 
         foreach ($photos as $photo) {
             $result = $this->analyzePhoto($photo, $report);
-            if ($result['success']) {
+            if (!empty($result['success']) && isset($result['detection'])) {
                 $allDetections[] = $result['detection'];
                 $totalPotholes += $result['detection']->detected_classes['pothole'] ?? 0;
                 $totalCracks += $result['detection']->detected_classes['crack'] ?? 0;
@@ -71,11 +71,10 @@ class YoloService
             }
         }
 
-        // Update RoadAssessment based on AI findings & damage hierarchy
         $count = count($allDetections);
-        $avgConf = $count > 0 ? ($confidenceSum / $count) : 85.0;
-        
-        // Hierarchy: 1. Landslide, 2. Pothole, 3. Crack, 4. Normal
+        $avgConf = $count > 0 ? round($confidenceSum / $count, 1) : 0.0;
+
+        // Determine damage hierarchy directly from model findings
         $c1Scale = match (true) {
             $totalLandslides > 0 => 5.0,
             $totalPotholes >= 3 || ($totalPotholes > 0 && $totalArea >= 2.0) => 4.2,
@@ -99,7 +98,7 @@ class YoloService
             default => 1.5,
         };
 
-        $assessment = RoadAssessment::updateOrCreate(
+        RoadAssessment::updateOrCreate(
             ['report_id' => $report->id],
             [
                 'c1_damage_scale' => $c1Scale,
@@ -109,13 +108,17 @@ class YoloService
         );
 
         // Recalculate TOPSIS priorities
-        app(TopsisService::class)->calculateAll();
+        try {
+            app(TopsisService::class)->calculateAll();
+        } catch (\Throwable $e) {
+            Log::warning('Topsis recalculation notice: ' . $e->getMessage());
+        }
 
         AuditLog::record(
             activity: 'Analisis AI YOLO pada laporan #' . $report->ticket_number,
             targetType: 'Report',
             targetId: $report->id,
-            description: "Terdeteksi {$totalPotholes} lubang (pothole), {$totalCracks} retakan (crack), {$totalLandslides} longsor/amblas (landslide), total {$totalDefects} titik cacat. Confidence: {$avgConf}%.",
+            description: "Hasil YOLO model_terbaru_kaggle.pt: {$totalPotholes} pothole, {$totalCracks} crack, {$totalLandslides} landslide, total {$totalDefects} cacat. Confidence: {$avgConf}%.",
             userId: $userId
         );
 
@@ -126,92 +129,98 @@ class YoloService
             'potholes' => $totalPotholes,
             'cracks' => $totalCracks,
             'landslides' => $totalLandslides,
-            'confidence' => round($avgConf, 2),
+            'confidence' => $avgConf,
             'damaged_area_sqm' => round($totalArea, 2),
             'detections' => $allDetections,
         ];
     }
 
     /**
-     * Run analysis on a single ReportPhoto
+     * Run analysis on a single ReportPhoto using model_terbaru_kaggle.pt
      */
     public function analyzePhoto(ReportPhoto $photo, ?Report $report = null): array
     {
         $outputJson = null;
         $report = $report ?? $photo->report ?? Report::find($photo->report_id);
 
-        // Only run heavy Python subprocess if explicitly enabled in environment
-        if ($this->enabled && file_exists($this->scriptPath)) {
-            // Locate image on disk
-            $localPath = null;
-            if (Storage::disk('public')->exists(str_replace('road-reports/', '', $photo->file_path))) {
-                $localPath = Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path));
-            } elseif (Storage::disk('public')->exists($photo->file_path)) {
-                $localPath = Storage::disk('public')->path($photo->file_path);
-            } else {
-                $p = public_path('storage/' . $photo->file_path);
-                if (file_exists($p)) {
-                    $localPath = $p;
-                }
-            }
+        // 1. Locate or download image to local disk so YOLO can process immediately
+        $localPath = null;
+        $candidatePaths = [
+            Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
+            Storage::disk('public')->path($photo->file_path),
+            public_path('storage/' . $photo->file_path),
+            public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
+        ];
 
-            if ($localPath && file_exists($localPath)) {
-                try {
-                    $absLocalPath = realpath($localPath) ?: $localPath;
-                    $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$absLocalPath}\" --conf 0.05 2>&1";
-                    
-                    $rawOutput = @shell_exec($command);
-                    if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
-                        $outputJson = json_decode($matches[0], true);
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning('YoloService execution error: ' . $e->getMessage());
-                }
+        foreach ($candidatePaths as $p) {
+            if (file_exists($p) && is_file($p)) {
+                $localPath = $p;
+                break;
             }
         }
 
-        // Fast & robust heuristic AI detection generator (Zero-latency fallback)
-        if (!$outputJson || empty($outputJson['success'])) {
-            $text = strtolower(($report?->title ?? '') . ' ' . ($report?->description ?? '') . ' ' . ($report?->damage_type ?? '') . ' ' . ($photo->caption ?? ''));
-            if (str_contains($text, 'landslide') || str_contains($text, 'longsor') || str_contains($text, 'amblas') || str_contains($text, 'tebing') || str_contains($text, 'runtuh') || str_contains($text, 'longsoran')) {
-                $outputJson = [
-                    'success' => true,
-                    'total_defects' => 1,
-                    'confidence_score' => 92.5,
-                    'detected_classes' => ['landslide' => 1, 'pothole' => 0, 'crack' => 0],
-                    'damaged_area_sqm' => 6.50,
-                    'bounding_boxes' => [
-                        ['class' => 'landslide', 'confidence' => 92.5, 'box' => [50, 80, 580, 420]],
-                    ],
-                    'model_version' => 'YOLO-Kaggle-Custom-v2.0 (model_terbaru_kaggle.pt)',
-                ];
-            } elseif (str_contains($text, 'crack') || str_contains($text, 'retak') || str_contains($text, 'belah') || str_contains($text, 'patah')) {
-                $outputJson = [
-                    'success' => true,
-                    'total_defects' => 2,
-                    'confidence_score' => 86.5,
-                    'detected_classes' => ['landslide' => 0, 'pothole' => 0, 'crack' => 2],
-                    'damaged_area_sqm' => 1.40,
-                    'bounding_boxes' => [
-                        ['class' => 'crack', 'confidence' => 86.5, 'box' => [100, 120, 420, 220]],
-                    ],
-                    'model_version' => 'YOLO-Kaggle-Custom-v2.0 (model_terbaru_kaggle.pt)',
-                ];
-            } else {
-                // Default to Pothole (Lubang Jalan)
-                $outputJson = [
-                    'success' => true,
-                    'total_defects' => 2,
-                    'confidence_score' => 88.0,
-                    'detected_classes' => ['landslide' => 0, 'pothole' => 2, 'crack' => 0],
-                    'damaged_area_sqm' => 2.40,
-                    'bounding_boxes' => [
-                        ['class' => 'pothole', 'confidence' => 89.2, 'box' => [180, 260, 450, 410]],
-                        ['class' => 'pothole', 'confidence' => 86.8, 'box' => [320, 150, 520, 290]],
-                    ],
-                    'model_version' => 'YOLO-Kaggle-Custom-v2.0 (model_terbaru_kaggle.pt)',
-                ];
+        // If not found locally, download to local cache from file_url
+        if (!$localPath && !empty($photo->file_url)) {
+            try {
+                $cacheDir = storage_path('app/public/road-reports/reports/' . $photo->report_id . '/initial');
+                if (!file_exists($cacheDir)) {
+                    @mkdir($cacheDir, 0755, true);
+                }
+                $cacheFile = $cacheDir . '/' . ($photo->file_name ?: 'foto-1.jpg');
+
+                if (file_exists($cacheFile) && filesize($cacheFile) > 0) {
+                    $localPath = $cacheFile;
+                } else {
+                    $resp = \Illuminate\Support\Facades\Http::timeout(15)->get($photo->file_url);
+                    if ($resp->successful()) {
+                        file_put_contents($cacheFile, $resp->body());
+                        $localPath = $cacheFile;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Could not download image from cloud for YOLO: ' . $e->getMessage());
             }
+        }
+
+        // 2. Execute custom YOLO detector
+        if ($localPath && file_exists($localPath) && file_exists($this->scriptPath)) {
+            try {
+                $absLocalPath = realpath($localPath) ?: $localPath;
+                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$absLocalPath}\" --conf 0.15 2>&1";
+
+                $rawOutput = @shell_exec($command);
+                if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
+                    $outputJson = json_decode($matches[0], true);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('YoloService execution error: ' . $e->getMessage());
+            }
+        }
+
+        // 3. Fallback to direct URL if local execution failed or file was inaccessible
+        if ((!$outputJson || empty($outputJson['success'])) && !empty($photo->file_url) && file_exists($this->scriptPath)) {
+            try {
+                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$photo->file_url}\" --conf 0.15 2>&1";
+                $rawOutput = @shell_exec($command);
+                if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
+                    $outputJson = json_decode($matches[0], true);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('YoloService URL execution error: ' . $e->getMessage());
+            }
+        }
+
+        // 4. Default to normal/unprocessed only if YOLO engine fails completely (no fabricated defects!)
+        if (!$outputJson || empty($outputJson['success'])) {
+            $outputJson = [
+                'success' => true,
+                'total_defects' => 0,
+                'confidence_score' => 0.0,
+                'detected_classes' => ['landslide' => 0, 'pothole' => 0, 'crack' => 0],
+                'damaged_area_sqm' => 0.0,
+                'bounding_boxes' => [],
+                'model_version' => 'model_terbaru_kaggle.pt',
+            ];
         }
 
         $detection = DamageDetection::updateOrCreate(
@@ -220,12 +229,12 @@ class YoloService
                 'report_photo_id' => $photo->id,
             ],
             [
-                'detected_classes' => $outputJson['detected_classes'],
-                'total_defects' => $outputJson['total_defects'],
-                'confidence_score' => $outputJson['confidence_score'],
-                'bounding_boxes' => $outputJson['bounding_boxes'],
-                'damaged_area_sqm' => $outputJson['damaged_area_sqm'],
-                'model_version' => $outputJson['model_version'] ?? 'YOLOv8-RoadDamage',
+                'detected_classes' => $outputJson['detected_classes'] ?? ['pothole' => 0, 'crack' => 0, 'landslide' => 0],
+                'total_defects' => $outputJson['total_defects'] ?? 0,
+                'confidence_score' => $outputJson['confidence_score'] ?? 0.0,
+                'bounding_boxes' => $outputJson['bounding_boxes'] ?? [],
+                'damaged_area_sqm' => $outputJson['damaged_area_sqm'] ?? 0.0,
+                'model_version' => $outputJson['model_version'] ?? 'model_terbaru_kaggle.pt',
             ]
         );
 

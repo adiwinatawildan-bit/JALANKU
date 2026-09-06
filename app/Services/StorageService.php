@@ -83,6 +83,13 @@ class StorageService
     {
         $fullPath = "{$this->bucket}/{$relativePath}";
 
+        // Always persist a local copy for instant YOLO AI inference
+        try {
+            Storage::disk('public')->putFileAs("road-reports/" . dirname($relativePath), $file, $fileName);
+        } catch (\Throwable $e) {
+            Log::warning('Local storage copy notice: ' . $e->getMessage());
+        }
+
         if ($this->hasSupabaseConfig()) {
             try {
                 $endpoint = rtrim($this->supabaseUrl, '/') . "/storage/v1/object/{$this->bucket}/{$relativePath}";
@@ -111,7 +118,7 @@ class StorageService
         }
 
         // Local Storage Fallback
-        $localPath = Storage::disk('public')->putFileAs("road-reports/" . dirname($relativePath), $file, $fileName);
+        $localPath = "road-reports/{$relativePath}";
         $publicUrl = asset('storage/' . $localPath);
 
         return [

@@ -49,13 +49,14 @@ class TopsisService
             $criteriaTypes[$criterion->code] = $criterion->type; // 'benefit' or 'cost'
         }
 
-        // Standard criteria mapping to RoadAssessment columns
+        // Standard criteria mapping to RoadAssessment columns (4 Criteria SPK)
         $codeMap = [
-            'C1' => 'c1_damage_scale',
-            'C2' => 'c2_user_safety',
-            'C3' => 'c3_traffic_volume',
-            'C4' => 'c4_report_count',
-            'C5' => 'c5_road_function',
+            'C1' => 'c1_damage_scale',     // Tingkat/Luas Kerusakan (AI YOLO)
+            'C2' => 'c2_user_safety',      // Keselamatan Pengguna
+            'C3' => 'c4_report_count',     // Jumlah Laporan Tervalidasi
+            'C4' => 'c8_pending_days',     // Lama Belum Tertangani
+            // Fallback aliases if customized:
+            'C5' => 'c8_pending_days',
             'C6' => 'c6_facility_proximity',
             'C7' => 'c7_community_impact',
             'C8' => 'c8_pending_days',
@@ -296,28 +297,16 @@ class TopsisService
 
         if ($level === 'Sangat Prioritas' || $level === 'Prioritas Tinggi') {
             if (($raw['C1'] ?? 0) >= 4.0) {
-                $reasons[] = 'tingkat kerusakan sangat parah/luas';
+                $reasons[] = 'tingkat kerusakan sangat parah/luas berdasarkan deteksi model AI YOLO';
             }
             if (($raw['C2'] ?? 0) >= 4.0) {
                 $reasons[] = 'berisiko tinggi terhadap keselamatan pengguna jalan';
             }
-            if (($raw['C3'] ?? 0) >= 4.0) {
-                $reasons[] = 'memiliki volume lalu lintas padat';
+            if (($raw['C3'] ?? 0) >= 2) {
+                $reasons[] = "mendapat banyak akumulasi aduan masyarakat ({$raw['C3']} laporan serupa)";
             }
-            if (($raw['C4'] ?? 0) >= 2) {
-                $reasons[] = "mendapat banyak akumulasi aduan masyarakat ({$raw['C4']} laporan serupa)";
-            }
-            if (($raw['C5'] ?? 0) >= 4.0) {
-                $reasons[] = 'merupakan jalur fungsi utama/arteri';
-            }
-            if (($raw['C6'] ?? 0) >= 4.0) {
-                $reasons[] = 'berada sangat dekat dengan fasilitas publik vital';
-            }
-            if (($raw['C7'] ?? 0) >= 4.0) {
-                $reasons[] = 'berdampak signifikan terhadap aktivitas warga';
-            }
-            if (($raw['C8'] ?? 0) >= 7) {
-                $reasons[] = "telah menunggu penanganan selama {$raw['C8']} hari";
+            if (($raw['C4'] ?? 0) >= 7) {
+                $reasons[] = "telah menunggu penanganan selama {$raw['C4']} hari";
             }
 
             if (empty($reasons)) {

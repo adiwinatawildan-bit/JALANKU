@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     libgl1 \
     libglib2.0-0 \
+    python3 \
+    python3-pip \
+    python3-venv \
+    && pip3 install --no-cache-dir --break-system-packages ultralytics \
     && docker-php-ext-install pdo pdo_pgsql pgsql mbstring zip bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 

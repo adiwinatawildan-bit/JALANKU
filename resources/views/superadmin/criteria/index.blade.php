@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Kriteria & Bobot Prioritas TOPSIS - JALAN KU')
-@section('header_title', 'Konfigurasi SPK: 8 Kriteria & Bobot TOPSIS')
+@section('header_title', 'Konfigurasi SPK: Kriteria & Bobot TOPSIS')
 
 @section('content')
 <div class="space-y-8 max-w-5xl">
@@ -13,7 +13,7 @@
                 <i class="fa-solid fa-scale-balanced"></i>
             </div>
             <div>
-                <h2 class="text-xl font-extrabold text-navy-900">8 Kriteria Penentuan Prioritas Perbaikan Jalan</h2>
+                <h2 class="text-xl font-extrabold text-navy-900">{{ $criteria->count() }} Kriteria Penentuan Prioritas Perbaikan Jalan</h2>
                 <p class="text-xs text-slate-500">Bobot menentukan seberapa besar pengaruh setiap kriteria dalam perhitungan skor TOPSIS.</p>
             </div>
         </div>
