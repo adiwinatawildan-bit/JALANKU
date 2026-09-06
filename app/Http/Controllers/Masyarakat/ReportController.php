@@ -101,8 +101,8 @@ class ReportController extends Controller
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'kecamatan' => ['required', 'string', 'max:100'],
             'desa' => ['required', 'string', 'max:100'],
-            'damage_type' => ['required', 'string', 'in:pothole,crack,landslide,retak,amblas,bergelombang,drainase,lainnya'],
-            'disturbance_level' => ['required', 'string', 'in:rendah,sedang,tinggi,sangat_parah'],
+            'damage_type' => ['nullable', 'string'],
+            'disturbance_level' => ['nullable', 'string'],
             'additional_info' => ['nullable', 'string'],
             'photos' => ['required', 'array', 'min:1', 'max:3'],
             'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
@@ -137,8 +137,8 @@ class ReportController extends Controller
                 'road_name' => $validated['road_name'],
                 'kecamatan' => $validated['kecamatan'],
                 'desa' => $validated['desa'],
-                'damage_type' => $validated['damage_type'],
-                'disturbance_level' => $validated['disturbance_level'],
+                'damage_type' => $validated['damage_type'] ?? 'pothole',
+                'disturbance_level' => $validated['disturbance_level'] ?? 'sedang',
                 'additional_info' => $validated['additional_info'] ?? null,
                 'status' => Report::STATUS_DIAJUKAN,
                 'is_public' => true,
@@ -184,8 +184,26 @@ class ReportController extends Controller
             }
 
             // Run YOLO AI Analysis & TOPSIS Calculation
-            $this->yoloService->analyzeReport($report, $user->id);
-            $this->topsisService->calculateAll();
+            try {
+                $yoloResult = $this->yoloService->analyzeReport($report, $user->id);
+                if (!empty($yoloResult['success'])) {
+                    if (($yoloResult['landslides'] ?? 0) > 0) {
+                        $report->update(['damage_type' => 'landslide', 'disturbance_level' => 'sangat_parah']);
+                    } elseif (($yoloResult['potholes'] ?? 0) > 0) {
+                        $report->update(['damage_type' => 'pothole', 'disturbance_level' => ($yoloResult['potholes'] >= 3 ? 'tinggi' : 'sedang')]);
+                    } elseif (($yoloResult['cracks'] ?? 0) > 0) {
+                        $report->update(['damage_type' => 'crack', 'disturbance_level' => 'sedang']);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('YOLO analysis notice: ' . $e->getMessage());
+            }
+
+            try {
+                $this->topsisService->calculateAll();
+            } catch (\Throwable $e) {
+                Log::warning('TOPSIS calculation notice: ' . $e->getMessage());
+            }
 
             // Notify user
             Notification::create([

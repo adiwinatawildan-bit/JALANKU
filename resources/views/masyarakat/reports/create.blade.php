@@ -51,39 +51,7 @@
                     <p class="text-xs text-rose-600 font-bold mt-1 hidden field-error" id="error-description">⚠️ Deskripsi kerusakan wajib diisi.</p>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Jenis Kerusakan -->
-                    <div class="space-y-1">
-                        <label for="damage_type" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Jenis Kerusakan <span class="text-rose-500">*</span></label>
-                        <select id="damage_type" name="damage_type" required class="w-full px-4 py-2.5 bg-slate-50 border @error('damage_type') border-rose-500 @else border-slate-300 @enderror rounded-xl text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                            <option value="" disabled {{ old('damage_type') ? '' : 'selected' }}>-- Pilih Jenis Kerusakan --</option>
-                            <option value="pothole" {{ old('damage_type') == 'pothole' ? 'selected' : '' }}>Lubang Jalan (Pothole)</option>
-                            <option value="crack" {{ old('damage_type') == 'crack' ? 'selected' : '' }}>Retak Jalan (Crack)</option>
-                            <option value="landslide" {{ old('damage_type') == 'landslide' ? 'selected' : '' }}>Longsor / Amblas (Landslide)</option>
-                            <option value="lainnya" {{ old('damage_type') == 'lainnya' ? 'selected' : '' }}>Kerusakan Lainnya</option>
-                        </select>
-                        @error('damage_type')
-                            <p class="text-xs text-rose-600 font-bold mt-1">{{ $message }}</p>
-                        @enderror
-                        <p class="text-xs text-rose-600 font-bold mt-1 hidden field-error" id="error-damage_type">⚠️ Silakan pilih salah satu jenis kerusakan.</p>
-                    </div>
 
-                    <!-- Tingkat Gangguan -->
-                    <div class="space-y-1">
-                        <label for="disturbance_level" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Tingkat Gangguan / Bahaya <span class="text-rose-500">*</span></label>
-                        <select id="disturbance_level" name="disturbance_level" required class="w-full px-4 py-2.5 bg-slate-50 border @error('disturbance_level') border-rose-500 @else border-slate-300 @enderror rounded-xl text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                            <option value="" disabled {{ old('disturbance_level') ? '' : 'selected' }}>-- Pilih Tingkat Gangguan / Bahaya --</option>
-                            <option value="sangat_parah" {{ old('disturbance_level') == 'sangat_parah' ? 'selected' : '' }}>Sangat Parah (Macet Total / Rawan Kecelakaan Berat)</option>
-                            <option value="tinggi" {{ old('disturbance_level') == 'tinggi' ? 'selected' : '' }}>Tinggi (Membahayakan Pengendara Motor)</option>
-                            <option value="sedang" {{ old('disturbance_level') == 'sedang' ? 'selected' : '' }}>Sedang (Mengganggu Kelancaran Lalu Lintas)</option>
-                            <option value="rendah" {{ old('disturbance_level') == 'rendah' ? 'selected' : '' }}>Rendah (Kerusakan Awal / Ringan)</option>
-                        </select>
-                        @error('disturbance_level')
-                            <p class="text-xs text-rose-600 font-bold mt-1">{{ $message }}</p>
-                        @enderror
-                        <p class="text-xs text-rose-600 font-bold mt-1 hidden field-error" id="error-disturbance_level">⚠️ Silakan pilih tingkat gangguan.</p>
-                    </div>
-                </div>
 
                 <!-- Informasi Tambahan -->
                 <div class="space-y-1">
@@ -498,16 +466,12 @@
 
                 var title = (document.getElementById('title')?.value || '').trim();
                 var description = (document.getElementById('description')?.value || '').trim();
-                var damageType = document.getElementById('damage_type')?.value || '';
-                var disturbance = document.getElementById('disturbance_level')?.value || '';
                 var roadName = (document.getElementById('road_name')?.value || '').trim();
                 var kecamatan = (document.getElementById('kecamatan')?.value || '').trim();
                 var desa = (document.getElementById('desa')?.value || '').trim();
 
                 if (!title) markInvalid('title', 'error-title');
                 if (!description) markInvalid('description', 'error-description');
-                if (!damageType) markInvalid('damage_type', 'error-damage_type');
-                if (!disturbance) markInvalid('disturbance_level', 'error-disturbance_level');
                 if (!roadName) markInvalid('road_name', 'error-road_name');
                 if (!kecamatan) markInvalid('kecamatan', 'error-kecamatan');
                 if (!desa) markInvalid('desa', 'error-desa');

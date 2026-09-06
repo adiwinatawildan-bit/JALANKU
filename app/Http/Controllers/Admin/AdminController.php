@@ -80,7 +80,7 @@ class AdminController extends Controller
             ->whereHas('priorityResult')
             ->join('priority_results', 'reports.id', '=', 'priority_results.report_id')
             ->orderBy('priority_results.score', 'desc')
-            ->select('reports.*')
+            ->select('reports.*', 'reports.id as id')
             ->take(10)
             ->get();
 
