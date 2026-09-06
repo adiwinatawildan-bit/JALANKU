@@ -106,15 +106,17 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[s
 
                     # Resolve class name from model.names dictionary
                     cls_name = str(model.names.get(cls_id, "")).lower()
-                    if "landslide" in cls_name or "longsor" in cls_name or cls_id == 1:
+                    if "landslide" in cls_name or "longsor" in cls_name or (cls_id == 1 and not cls_name):
                         landslides += 1
                         cls_key = "landslide"
-                    elif "crack" in cls_name or "retak" in cls_name or cls_id == 0:
+                    elif "pothole" in cls_name or "lubang" in cls_name or (cls_id == 2 and not cls_name):
+                        potholes += 1
+                        cls_key = "pothole"
+                    elif "crack" in cls_name or "retak" in cls_name or (cls_id == 0 and not cls_name):
                         cracks += 1
                         cls_key = "crack"
                     else:
-                        potholes += 1
-                        cls_key = "pothole"
+                        cls_key = "normal"
 
                     conf_sum += conf
                     boxes_data.append({
@@ -129,8 +131,10 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[s
                 area_sqm = round(4.5 + (landslides * 2.0) + (potholes * 0.5), 2)
             elif potholes > 0:
                 area_sqm = round((potholes * 0.65) + (cracks * 0.3), 2)
-            else:
+            elif cracks > 0:
                 area_sqm = round(max(0.6, cracks * 0.45), 2)
+            else:
+                area_sqm = 0.0
 
             results["total_defects"] = total
             results["detected_classes"]["pothole"] = potholes

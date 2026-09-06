@@ -184,11 +184,11 @@
                             </td>
                             <td class="py-4 px-3">
                                 @php
-                                    $det = $rep->damageDetections->first();
-                                    $classes = $det?->detected_classes ?? [];
-                                    $landslides = $classes['landslide'] ?? 0;
-                                    $potholes = $classes['pothole'] ?? 0;
-                                    $cracks = $classes['crack'] ?? 0;
+                                    $detections = $rep->damageDetections;
+                                    $landslides = $detections->sum(fn($d) => $d->detected_classes['landslide'] ?? 0);
+                                    $potholes = $detections->sum(fn($d) => $d->detected_classes['pothole'] ?? 0);
+                                    $cracks = $detections->sum(fn($d) => $d->detected_classes['crack'] ?? 0);
+                                    $totalDefects = $detections->sum('total_defects');
 
                                     if ($landslides > 0) {
                                         $label = "LANDSLIDE ({$landslides}x)";
@@ -202,12 +202,12 @@
                                         $label = "CRACK ({$cracks} Retak)";
                                         $badgeStyle = "bg-sky-50 text-sky-700 border-sky-200";
                                         $icon = "fa-bolt";
-                                    } elseif ($det) {
-                                        $label = "NORMAL / MINOR";
+                                    } elseif ($detections->isNotEmpty() && $totalDefects === 0) {
+                                        $label = "NORMAL / BAIK";
                                         $badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
                                         $icon = "fa-circle-check";
                                     } else {
-                                        $label = strtoupper($rep->damage_type) . " (" . strtoupper($rep->disturbance_level) . ")";
+                                        $label = strtoupper($rep->damage_type ?? 'NORMAL') . " (" . strtoupper($rep->disturbance_level ?? 'RINGAN') . ")";
                                         $badgeStyle = "bg-slate-100 text-slate-700 border-slate-200";
                                         $icon = "fa-road";
                                     }

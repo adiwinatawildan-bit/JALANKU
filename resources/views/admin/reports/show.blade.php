@@ -122,32 +122,37 @@
                         </div>
                     </div>
                     @php
-                        $latestDetection = $report->damageDetections->first();
+                        $detections = $report->damageDetections;
+                        $totalLandslides = $detections->sum(fn($d) => $d->detected_classes['landslide'] ?? 0);
+                        $totalPotholes = $detections->sum(fn($d) => $d->detected_classes['pothole'] ?? 0);
+                        $totalCracks = $detections->sum(fn($d) => $d->detected_classes['crack'] ?? 0);
+                        $totalDefects = $detections->sum('total_defects');
+                        $maxConfidence = $detections->max('confidence_score') ?? 0;
                     @endphp
-                    @if($latestDetection)
+                    @if($detections->isNotEmpty())
                         <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            Confidence: {{ $latestDetection->confidence_score }}%
+                            Confidence: {{ $maxConfidence }}%
                         </span>
                     @endif
                 </div>
 
-                @if($latestDetection)
+                @if($detections->isNotEmpty())
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                         <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
                             <span class="text-[10px] uppercase font-bold text-slate-400">Landslide (Longsor)</span>
-                            <p class="text-2xl font-extrabold text-rose-400 mt-1">{{ $latestDetection->detected_classes['landslide'] ?? 0 }}</p>
+                            <p class="text-2xl font-extrabold text-rose-400 mt-1">{{ $totalLandslides }}</p>
                         </div>
                         <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
                             <span class="text-[10px] uppercase font-bold text-slate-400">Pothole (Lubang)</span>
-                            <p class="text-2xl font-extrabold text-amber-400 mt-1">{{ $latestDetection->detected_classes['pothole'] ?? 0 }}</p>
+                            <p class="text-2xl font-extrabold text-amber-400 mt-1">{{ $totalPotholes }}</p>
                         </div>
                         <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
                             <span class="text-[10px] uppercase font-bold text-slate-400">Crack (Retakan)</span>
-                            <p class="text-2xl font-extrabold text-sky-400 mt-1">{{ $latestDetection->detected_classes['crack'] ?? 0 }}</p>
+                            <p class="text-2xl font-extrabold text-sky-400 mt-1">{{ $totalCracks }}</p>
                         </div>
                         <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
                             <span class="text-[10px] uppercase font-bold text-slate-400">Total Defect</span>
-                            <p class="text-2xl font-extrabold text-emerald-400 mt-1">{{ $latestDetection->total_defects }}</p>
+                            <p class="text-2xl font-extrabold text-emerald-400 mt-1">{{ $totalDefects }}</p>
                         </div>
                     </div>
                 @else

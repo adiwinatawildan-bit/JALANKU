@@ -23,12 +23,18 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
+        $loginInput = $request->input('email');
+        $request->validate([
+            'email' => ['required', 'string'],
             'password' => ['required'],
         ]);
 
         $remember = $request->boolean('remember');
+        $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);
+        $credentials = [
+            $isEmail ? 'email' : 'name' => $loginInput,
+            'password' => $request->input('password'),
+        ];
 
         if (Auth::attempt($credentials, $remember)) {
             $user = Auth::user();
@@ -52,7 +58,7 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'Email atau password yang Anda masukkan tidak sesuai.',
+            'email' => 'Email/Username atau password yang Anda masukkan tidak sesuai.',
         ])->onlyInput('email');
     }
 
