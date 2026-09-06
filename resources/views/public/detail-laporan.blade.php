@@ -54,7 +54,7 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         <i class="fa-solid fa-building-user text-sky-400 text-sm"></i>
-                        <span>OPD Pelaksana: <strong class="text-white">{{ $report->opd?->name ?? 'Dinas Terkait (Dalam Penugasan)' }}</strong></span>
+                        <span>OPD Pelaksana: <strong class="text-white">{{ $report->opd?->name ?? 'Belum Ditugaskan (Menunggu Verifikasi Admin)' }}</strong></span>
                     </div>
                 </div>
             </div>

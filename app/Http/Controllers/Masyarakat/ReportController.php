@@ -114,6 +114,18 @@ class ReportController extends Controller
 
         return DB::transaction(function () use ($validated, $request) {
             $user = Auth::user();
+
+            // Anti-duplicate protection: check if same user submitted same title within last 15 seconds
+            $recentReport = Report::where('user_id', $user->id)
+                ->where('title', $validated['title'])
+                ->where('created_at', '>=', now()->subSeconds(15))
+                ->first();
+
+            if ($recentReport) {
+                return redirect()->route('masyarakat.reports.show', $recentReport->id)
+                    ->with('success', "Laporan Anda dengan nomor tiket {$recentReport->ticket_number} telah berhasil dikirim!");
+            }
+
             $ticketNumber = 'JLK-' . date('Ym') . '-' . strtoupper(Str::random(5));
 
             // Create Report

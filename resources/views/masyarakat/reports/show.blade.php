@@ -38,15 +38,15 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-100 text-xs">
             <div>
                 <span class="text-slate-400 block font-semibold">Jenis Cacat Jalan</span>
-                <span class="font-bold text-navy-900">{{ ucfirst($report->damage_type) }}</span>
+                <span class="font-bold text-navy-900">{{ ucwords(str_replace('_', ' ', $report->damage_type)) }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-semibold">Tingkat Gangguan</span>
-                <span class="font-bold text-navy-900">{{ ucfirst($report->disturbance_level) }}</span>
+                <span class="font-bold text-navy-900">{{ ucwords(str_replace('_', ' ', $report->disturbance_level)) }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-semibold">OPD Pelaksana</span>
-                <span class="font-bold text-navy-900">{{ $report->opd?->name ?? 'Dalam Proses Penugasan' }}</span>
+                <span class="font-bold text-navy-900">{{ $report->opd?->name ?? 'Belum Ditugaskan (Menunggu Verifikasi Admin)' }}</span>
             </div>
         </div>
     </div>
