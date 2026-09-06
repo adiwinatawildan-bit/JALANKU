@@ -137,8 +137,8 @@ class ReportController extends Controller
                 'road_name' => $validated['road_name'],
                 'kecamatan' => $validated['kecamatan'],
                 'desa' => $validated['desa'],
-                'damage_type' => $validated['damage_type'] ?? 'pothole',
-                'disturbance_level' => $validated['disturbance_level'] ?? 'sedang',
+                'damage_type' => $validated['damage_type'] ?? 'normal',
+                'disturbance_level' => $validated['disturbance_level'] ?? 'rendah',
                 'additional_info' => $validated['additional_info'] ?? null,
                 'status' => Report::STATUS_DIAJUKAN,
                 'is_public' => true,
@@ -198,6 +198,8 @@ class ReportController extends Controller
                     $report->update(['damage_type' => 'pothole', 'disturbance_level' => ($yoloResult['potholes'] >= 3 ? 'tinggi' : 'sedang')]);
                 } elseif (($yoloResult['cracks'] ?? 0) > 0) {
                     $report->update(['damage_type' => 'crack', 'disturbance_level' => 'sedang']);
+                } else {
+                    $report->update(['damage_type' => 'normal', 'disturbance_level' => 'rendah']);
                 }
             }
         } catch (\Throwable $e) {

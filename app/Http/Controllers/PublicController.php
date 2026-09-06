@@ -125,10 +125,22 @@ class PublicController extends Controller
             ->pluck('count', 'status')
             ->toArray();
 
-        $damageTypeCounts = Report::select('damage_type', DB::raw('count(*) as count'))
+        $rawDamageCounts = Report::select('damage_type', DB::raw('count(*) as count'))
             ->groupBy('damage_type')
             ->pluck('count', 'damage_type')
             ->toArray();
+
+        $damageTypeCounts = [];
+        foreach ($rawDamageCounts as $key => $cnt) {
+            $label = match($key) {
+                'pothole' => 'Lubang (Pothole)',
+                'crack' => 'Retak (Crack)',
+                'landslide' => 'Longsor (Landslide)',
+                'lainnya', 'other', 'normal' => 'Normal / Baik',
+                default => ucfirst($key ?: 'Normal / Baik')
+            };
+            $damageTypeCounts[$label] = ($damageTypeCounts[$label] ?? 0) + $cnt;
+        }
 
         $driver = DB::getDriverName();
         if ($driver === 'sqlite') {

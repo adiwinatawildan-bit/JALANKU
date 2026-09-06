@@ -86,6 +86,15 @@
                     {{ $report->description }}
                 </p>
 
+                @php
+                    $detections = $report->damageDetections;
+                    $totalLandslides = $detections->sum(fn($d) => $d->detected_classes['landslide'] ?? 0);
+                    $totalPotholes = $detections->sum(fn($d) => $d->detected_classes['pothole'] ?? 0);
+                    $totalCracks = $detections->sum(fn($d) => $d->detected_classes['crack'] ?? 0);
+                    $totalDefects = $detections->sum('total_defects');
+                    $maxConfidence = $detections->max('confidence_score') ?? 0;
+                @endphp
+
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                     <div>
                         <span class="text-slate-400 block font-semibold">Pelapor</span>
@@ -100,19 +109,21 @@
                     <div>
                         <span class="text-slate-400 block font-semibold">Klasifikasi Cacat</span>
                         <span class="font-bold text-navy-900">
-                            @if($report->damage_type === 'landslide')
+                            @if($detections->isNotEmpty() && $totalDefects === 0)
+                                Kondisi Baik / Normal
+                            @elseif($totalLandslides > 0 || $report->damage_type === 'landslide')
                                 Longsor / Amblas
-                            @elseif($report->damage_type === 'pothole')
+                            @elseif($totalPotholes > 0 || $report->damage_type === 'pothole')
                                 Lubang Jalan
-                            @elseif($report->damage_type === 'crack')
+                            @elseif($totalCracks > 0 || $report->damage_type === 'crack')
                                 Retak Jalan
-                            @elseif($report->damage_type && !in_array($report->damage_type, ['lainnya', 'other']))
+                            @elseif($report->damage_type && !in_array($report->damage_type, ['lainnya', 'other', 'normal']))
                                 {{ ucfirst($report->damage_type) }}
                             @else
-                                Deteksi Otomatis AI
+                                Kondisi Baik / Normal
                             @endif
                         </span>
-                        <span class="text-[10px] text-slate-500 block">Tingkat: {{ ucfirst($report->disturbance_level ?? 'Normal') }}</span>
+                        <span class="text-[10px] text-slate-500 block">Tingkat: {{ ucfirst(($detections->isNotEmpty() && $totalDefects === 0) ? 'Rendah' : ($report->disturbance_level ?? 'Rendah')) }}</span>
                     </div>
                     <div>
                         <span class="text-slate-400 block font-semibold">Koordinat GPS</span>
@@ -133,14 +144,6 @@
                             <p class="text-xs text-slate-400">Ultralytics YOLO & OpenCV Computer Vision Analysis</p>
                         </div>
                     </div>
-                    @php
-                        $detections = $report->damageDetections;
-                        $totalLandslides = $detections->sum(fn($d) => $d->detected_classes['landslide'] ?? 0);
-                        $totalPotholes = $detections->sum(fn($d) => $d->detected_classes['pothole'] ?? 0);
-                        $totalCracks = $detections->sum(fn($d) => $d->detected_classes['crack'] ?? 0);
-                        $totalDefects = $detections->sum('total_defects');
-                        $maxConfidence = $detections->max('confidence_score') ?? 0;
-                    @endphp
                     @if($detections->isNotEmpty())
                         <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                             Confidence: {{ $maxConfidence }}%
