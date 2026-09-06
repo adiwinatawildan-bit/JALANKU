@@ -42,7 +42,7 @@ return [
     ],
 
     'yolo' => [
-        'enabled' => env('YOLO_ENABLED', false),
+        'enabled' => env('YOLO_ENABLED', true),
         'python_path' => env('PYTHON_PATH'),
     ],
 

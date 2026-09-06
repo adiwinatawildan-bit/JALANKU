@@ -72,6 +72,7 @@ class YoloService
         }
 
         $count = count($allDetections);
+        $avgConf = $count > 0 ? round($confidenceSum / $count, 1) : 0.0;
         $totalLandslides = (int) $totalLandslides;
         $totalPotholes = (int) $totalPotholes;
         $totalCracks = (int) $totalCracks;
@@ -80,6 +81,7 @@ class YoloService
             $c1Scale = $totalLandslides >= 2 ? 5.0 : 4.6;
             $c2Safety = $totalLandslides >= 2 ? 5.0 : 4.6;
             $c7Impact = 5.0;
+            $report->update(['damage_type' => 'landslide', 'disturbance_level' => ($totalLandslides >= 2 ? 'sangat_parah' : 'tinggi')]);
         } elseif ($totalPotholes > 0) {
             $c1Scale = match (true) {
                 $totalPotholes >= 6 => 4.4,
@@ -92,6 +94,7 @@ class YoloService
                 default => 3.7,
             };
             $c7Impact = 4.0;
+            $report->update(['damage_type' => 'pothole', 'disturbance_level' => ($totalPotholes >= 3 ? 'tinggi' : 'sedang')]);
         } elseif ($totalCracks > 0) {
             $c1Scale = match (true) {
                 $totalCracks >= 4 => 3.2,
@@ -103,10 +106,12 @@ class YoloService
                 default => 2.4,
             };
             $c7Impact = 2.5;
+            $report->update(['damage_type' => 'crack', 'disturbance_level' => 'sedang']);
         } else {
             $c1Scale = 1.0;
             $c2Safety = 1.0;
             $c7Impact = 1.0;
+            $report->update(['damage_type' => 'normal', 'disturbance_level' => 'rendah']);
         }
 
         $hours = max(1, (int) $report->created_at->diffInHours(now()));
@@ -205,7 +210,7 @@ class YoloService
         if ($localPath && file_exists($localPath) && file_exists($this->scriptPath)) {
             try {
                 $absLocalPath = realpath($localPath) ?: $localPath;
-                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$absLocalPath}\" --conf 0.25 2>&1";
+                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$absLocalPath}\" --conf 0.15 2>&1";
 
                 $rawOutput = @shell_exec($command);
                 if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
@@ -219,7 +224,7 @@ class YoloService
         // 3. Fallback to direct URL if local execution failed
         if ((!$outputJson || empty($outputJson['success'])) && !empty($photo->file_url) && file_exists($this->scriptPath)) {
             try {
-                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$photo->file_url}\" --conf 0.25 2>&1";
+                $command = "\"{$this->pythonPath}\" \"{$this->scriptPath}\" --image \"{$photo->file_url}\" --conf 0.15 2>&1";
                 $rawOutput = @shell_exec($command);
                 if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
                     $outputJson = json_decode($matches[0], true);

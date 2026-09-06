@@ -109,13 +109,17 @@
                     <div>
                         <span class="text-slate-400 block font-semibold">Klasifikasi Cacat</span>
                         <span class="font-bold text-navy-900">
-                            @if($detections->isNotEmpty() && $totalDefects === 0)
-                                Kondisi Baik / Normal
-                            @elseif($totalLandslides > 0 || $report->damage_type === 'landslide')
+                            @if($totalLandslides > 0)
+                                Terdeteksi {{ $totalLandslides }} Longsor (Landslide)
+                            @elseif($totalPotholes > 0)
+                                Terdeteksi {{ $totalPotholes }} Lubang (Pothole)
+                            @elseif($totalCracks > 0)
+                                Terdeteksi {{ $totalCracks }} Retakan (Crack)
+                            @elseif($report->damage_type === 'landslide')
                                 Longsor / Amblas
-                            @elseif($totalPotholes > 0 || $report->damage_type === 'pothole')
+                            @elseif($report->damage_type === 'pothole')
                                 Lubang Jalan
-                            @elseif($totalCracks > 0 || $report->damage_type === 'crack')
+                            @elseif($report->damage_type === 'crack')
                                 Retak Jalan
                             @elseif($report->damage_type && !in_array($report->damage_type, ['lainnya', 'other', 'normal']))
                                 {{ ucfirst($report->damage_type) }}
