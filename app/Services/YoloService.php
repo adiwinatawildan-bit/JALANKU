@@ -146,9 +146,25 @@ class YoloService
         $localPath = null;
         $tempDownloaded = false;
 
-        // PRIORITY 1: Always download fresh from Supabase URL when available
-        // This prevents stale local seed data from being used for inference
-        if (!empty($photo->file_url) && str_starts_with($photo->file_url, 'http')) {
+        // PRIORITY 1: Check local storage path first (instant, zero network latency)
+        $candidatePaths = [
+            Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
+            Storage::disk('public')->path($photo->file_path),
+            public_path('storage/' . $photo->file_path),
+            public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
+            storage_path('app/public/' . $photo->file_path),
+            storage_path('app/public/' . str_replace('road-reports/', '', $photo->file_path)),
+        ];
+
+        foreach ($candidatePaths as $p) {
+            if (file_exists($p) && is_file($p) && filesize($p) > 1000) {
+                $localPath = $p;
+                break;
+            }
+        }
+
+        // PRIORITY 2: Fall back to download only if local file is missing
+        if (!$localPath && !empty($photo->file_url) && str_starts_with($photo->file_url, 'http')) {
             try {
                 $cacheDir = storage_path('app/public/yolo_cache');
                 if (!file_exists($cacheDir)) {
@@ -156,31 +172,14 @@ class YoloService
                 }
                 $cacheFile = $cacheDir . '/report_' . $photo->report_id . '_' . ($photo->file_name ?: 'foto-1.jpg');
 
-                $resp = \Illuminate\Support\Facades\Http::timeout(15)->get($photo->file_url);
-                if ($resp->successful()) {
+                $resp = \Illuminate\Support\Facades\Http::timeout(5)->connectTimeout(3)->get($photo->file_url);
+                if ($resp->successful() && strlen($resp->body()) > 1000) {
                     file_put_contents($cacheFile, $resp->body());
                     $localPath = $cacheFile;
                     $tempDownloaded = true;
                 }
             } catch (\Throwable $e) {
-                Log::warning('Could not download image from cloud for YOLO: ' . $e->getMessage());
-            }
-        }
-
-        // PRIORITY 2: Fall back to local file only if URL download failed or no URL exists
-        if (!$localPath) {
-            $candidatePaths = [
-                Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
-                Storage::disk('public')->path($photo->file_path),
-                public_path('storage/' . $photo->file_path),
-                public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
-            ];
-
-            foreach ($candidatePaths as $p) {
-                if (file_exists($p) && is_file($p) && filesize($p) > 1000) {
-                    $localPath = $p;
-                    break;
-                }
+                Log::warning('Could not download image for YOLO: ' . $e->getMessage());
             }
         }
 

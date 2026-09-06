@@ -112,23 +112,23 @@ class ReportController extends Controller
             'photos.*.mimes' => 'Format foto harus berupa JPG, JPEG, PNG, atau WEBP.',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
-            $user = Auth::user();
+        $user = Auth::user();
 
-            // Anti-duplicate protection: check if same user submitted same title within last 15 seconds
-            $recentReport = Report::where('user_id', $user->id)
-                ->where('title', $validated['title'])
-                ->where('created_at', '>=', now()->subSeconds(15))
-                ->first();
+        // Anti-duplicate protection: check if same user submitted same title within last 15 seconds
+        $recentReport = Report::where('user_id', $user->id)
+            ->where('title', $validated['title'])
+            ->where('created_at', '>=', now()->subSeconds(15))
+            ->first();
 
-            if ($recentReport) {
-                return redirect()->route('masyarakat.reports.show', $recentReport->id)
-                    ->with('success', "Laporan Anda dengan nomor tiket {$recentReport->ticket_number} telah berhasil dikirim!");
-            }
+        if ($recentReport) {
+            return redirect()->route('masyarakat.reports.show', $recentReport->id)
+                ->with('success', "Laporan Anda dengan nomor tiket {$recentReport->ticket_number} telah berhasil dikirim!");
+        }
 
-            $ticketNumber = 'JLK-' . date('Ym') . '-' . strtoupper(Str::random(5));
+        $ticketNumber = 'JLK-' . date('Ym') . '-' . strtoupper(Str::random(5));
 
-            // Create Report
+        // 1. Create Report in DB quickly
+        $report = DB::transaction(function () use ($validated, $user, $ticketNumber) {
             $report = Report::create([
                 'ticket_number' => $ticketNumber,
                 'user_id' => $user->id,
@@ -144,7 +144,6 @@ class ReportController extends Controller
                 'is_public' => true,
             ]);
 
-            // Create Location
             Location::create([
                 'report_id' => $report->id,
                 'road_name' => $validated['road_name'],
@@ -155,7 +154,6 @@ class ReportController extends Controller
                 'desa' => $validated['desa'],
             ]);
 
-            // Status History Initial
             ReportStatusHistory::create([
                 'report_id' => $report->id,
                 'from_status' => null,
@@ -164,11 +162,15 @@ class ReportController extends Controller
                 'changed_by' => $user->id,
             ]);
 
-            // Upload up to 3 Photos to Supabase/Local Storage
-            if ($request->hasFile('photos')) {
-                $files = $request->file('photos');
-                $index = 1;
-                foreach (array_slice($files, 0, 3) as $file) {
+            return $report;
+        });
+
+        // 2. Upload up to 3 Photos to Supabase/Local Storage safely
+        if ($request->hasFile('photos')) {
+            $files = $request->file('photos');
+            $index = 1;
+            foreach (array_slice($files, 0, 3) as $file) {
+                try {
                     $stored = $this->storageService->uploadInitialPhoto($file, $report->id, $index);
                     ReportPhoto::create([
                         'report_id' => $report->id,
@@ -180,32 +182,36 @@ class ReportController extends Controller
                         'uploaded_by' => $user->id,
                     ]);
                     $index++;
+                } catch (\Throwable $e) {
+                    Log::error("Photo upload error on report #{$report->id}: " . $e->getMessage());
                 }
             }
+        }
 
-            // Run YOLO AI Analysis & TOPSIS Calculation
-            try {
-                $yoloResult = $this->yoloService->analyzeReport($report, $user->id);
-                if (!empty($yoloResult['success'])) {
-                    if (($yoloResult['landslides'] ?? 0) > 0) {
-                        $report->update(['damage_type' => 'landslide', 'disturbance_level' => 'sangat_parah']);
-                    } elseif (($yoloResult['potholes'] ?? 0) > 0) {
-                        $report->update(['damage_type' => 'pothole', 'disturbance_level' => ($yoloResult['potholes'] >= 3 ? 'tinggi' : 'sedang')]);
-                    } elseif (($yoloResult['cracks'] ?? 0) > 0) {
-                        $report->update(['damage_type' => 'crack', 'disturbance_level' => 'sedang']);
-                    }
+        // 3. Run YOLO AI Analysis & TOPSIS safely without breaking report flow
+        try {
+            $yoloResult = $this->yoloService->analyzeReport($report, $user->id);
+            if (!empty($yoloResult['success'])) {
+                if (($yoloResult['landslides'] ?? 0) > 0) {
+                    $report->update(['damage_type' => 'landslide', 'disturbance_level' => 'sangat_parah']);
+                } elseif (($yoloResult['potholes'] ?? 0) > 0) {
+                    $report->update(['damage_type' => 'pothole', 'disturbance_level' => ($yoloResult['potholes'] >= 3 ? 'tinggi' : 'sedang')]);
+                } elseif (($yoloResult['cracks'] ?? 0) > 0) {
+                    $report->update(['damage_type' => 'crack', 'disturbance_level' => 'sedang']);
                 }
-            } catch (\Throwable $e) {
-                Log::warning('YOLO analysis notice: ' . $e->getMessage());
             }
+        } catch (\Throwable $e) {
+            Log::warning('YOLO analysis notice on report store: ' . $e->getMessage());
+        }
 
-            try {
-                $this->topsisService->calculateAll();
-            } catch (\Throwable $e) {
-                Log::warning('TOPSIS calculation notice: ' . $e->getMessage());
-            }
+        try {
+            $this->topsisService->calculateAll();
+        } catch (\Throwable $e) {
+            Log::warning('TOPSIS calculation notice on report store: ' . $e->getMessage());
+        }
 
-            // Notify user
+        // 4. Notify user & admin
+        try {
             Notification::create([
                 'user_id' => $user->id,
                 'type' => 'success',
@@ -214,7 +220,6 @@ class ReportController extends Controller
                 'link_url' => route('masyarakat.reports.show', $report->id),
             ]);
 
-            // Notify all admins
             $admins = User::whereHas('role', fn($q) => $q->where('name', 'admin'))->get();
             foreach ($admins as $admin) {
                 Notification::create([
@@ -233,10 +238,12 @@ class ReportController extends Controller
                 description: "Masyarakat {$user->name} membuat laporan kerusakan jalan di {$report->road_name}.",
                 userId: $user->id
             );
+        } catch (\Throwable $e) {
+            Log::warning('Notification/Audit notice: ' . $e->getMessage());
+        }
 
-            return redirect()->route('masyarakat.reports.show', $report->id)
-                ->with('success', "Laporan Anda dengan nomor tiket {$ticketNumber} berhasil dikirim dan sedang diproses!");
-        });
+        return redirect()->route('masyarakat.reports.show', $report->id)
+            ->with('success', "Laporan Anda dengan nomor tiket {$ticketNumber} berhasil dikirim dan sedang diproses!");
     }
 
     public function show($id)
