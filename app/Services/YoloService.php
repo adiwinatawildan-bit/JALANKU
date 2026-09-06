@@ -146,15 +146,16 @@ class YoloService
         $localPath = null;
         $tempDownloaded = false;
 
-        // PRIORITY 1: Check local storage path first (instant, zero network latency)
-        $candidatePaths = [
-            Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
-            Storage::disk('public')->path($photo->file_path),
-            public_path('storage/' . $photo->file_path),
-            public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
-            storage_path('app/public/' . $photo->file_path),
-            storage_path('app/public/' . str_replace('road-reports/', '', $photo->file_path)),
-        ];
+        if ($this->enabled) {
+            // PRIORITY 1: Check local storage path first (instant, zero network latency)
+            $candidatePaths = [
+                Storage::disk('public')->path(str_replace('road-reports/', '', $photo->file_path)),
+                Storage::disk('public')->path($photo->file_path),
+                public_path('storage/' . $photo->file_path),
+                public_path('storage/' . str_replace('road-reports/', '', $photo->file_path)),
+                storage_path('app/public/' . $photo->file_path),
+                storage_path('app/public/' . str_replace('road-reports/', '', $photo->file_path)),
+            ];
 
         foreach ($candidatePaths as $p) {
             if (file_exists($p) && is_file($p) && filesize($p) > 1000) {
@@ -214,6 +215,7 @@ class YoloService
         // Clean up temp download
         if ($tempDownloaded && $localPath && file_exists($localPath)) {
             @unlink($localPath);
+        }
         }
 
         // 4. Default to normal/unprocessed only if YOLO engine fails completely (no fabricated defects!)
