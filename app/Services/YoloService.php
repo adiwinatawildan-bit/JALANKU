@@ -59,7 +59,7 @@ class YoloService
         $totalArea = 0.0;
 
         foreach ($photos as $photo) {
-            $result = $this->analyzePhoto($photo);
+            $result = $this->analyzePhoto($photo, $report);
             if ($result['success']) {
                 $allDetections[] = $result['detection'];
                 $totalPotholes += $result['detection']->detected_classes['pothole'] ?? 0;
@@ -135,9 +135,10 @@ class YoloService
     /**
      * Run analysis on a single ReportPhoto
      */
-    public function analyzePhoto(ReportPhoto $photo): array
+    public function analyzePhoto(ReportPhoto $photo, ?Report $report = null): array
     {
         $outputJson = null;
+        $report = $report ?? $photo->report ?? Report::find($photo->report_id);
 
         // Only run heavy Python subprocess if explicitly enabled in environment
         if ($this->enabled && file_exists($this->scriptPath)) {
@@ -171,7 +172,7 @@ class YoloService
 
         // Fast & robust heuristic AI detection generator (Zero-latency fallback)
         if (!$outputJson || empty($outputJson['success'])) {
-            $damageType = strtolower($photo->report?->damage_type ?? 'pothole');
+            $damageType = strtolower($report?->damage_type ?? $photo->report?->damage_type ?? 'pothole');
             if (str_contains($damageType, 'landslide') || str_contains($damageType, 'longsor') || str_contains($damageType, 'amblas')) {
                 $outputJson = [
                     'success' => true,
@@ -210,10 +211,6 @@ class YoloService
                     'model_version' => 'YOLO-Kaggle-Custom-v2.0 (model_terbaru_kaggle.pt)',
                 ];
             }
-        }
-
-        if ($tempPath && file_exists($tempPath)) {
-            @unlink($tempPath);
         }
 
         $detection = DamageDetection::updateOrCreate(

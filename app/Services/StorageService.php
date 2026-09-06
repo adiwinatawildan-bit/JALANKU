@@ -73,10 +73,12 @@ class StorageService
         if ($this->hasSupabaseConfig()) {
             try {
                 $endpoint = rtrim($this->supabaseUrl, '/') . "/storage/v1/object/{$this->bucket}/{$relativePath}";
-                $response = Http::timeout(6)->connectTimeout(3)->withHeaders([
+                $mime = $file->getMimeType() ?: 'image/jpeg';
+                $response = Http::timeout(8)->connectTimeout(4)->withHeaders([
                     'Authorization' => 'Bearer ' . $this->supabaseKey,
                     'apikey' => $this->supabaseKey,
-                ])->withBody(file_get_contents($file->getRealPath()), $file->getMimeType())
+                    'x-upsert' => 'true',
+                ])->withBody(file_get_contents($file->getRealPath()), $mime)
                   ->post($endpoint);
 
                 if ($response->successful()) {
