@@ -72,6 +72,13 @@ class YoloService
         }
 
         $count = count($allDetections);
+        if ($count === 0) {
+            return [
+                'success' => false,
+                'message' => 'Model YOLO belum berhasil mendeteksi foto atau sedang diproses. Laporan tetap dalam status Menunggu Analisis AI.',
+            ];
+        }
+
         $avgConf = $count > 0 ? round($confidenceSum / $count, 1) : 0.0;
         $totalLandslides = (int) $totalLandslides;
         $totalPotholes = (int) $totalPotholes;
@@ -108,6 +115,7 @@ class YoloService
             $c7Impact = 2.5;
             $report->update(['damage_type' => 'crack', 'disturbance_level' => 'sedang']);
         } else {
+            // Model genuinely detected 0 defects
             $c1Scale = 1.0;
             $c2Safety = 1.0;
             $c7Impact = 1.0;
@@ -204,7 +212,7 @@ class YoloService
                 }
             }
 
-            // PRIORITY 2: Otherwise, fetch canonical photo from Supabase storage
+            // PRIORITY 2: Otherwise, fetch canonical photo from Supabase storage and keep in cache
             if (!$imageTarget && !empty($photo->file_url) && str_starts_with($photo->file_url, 'http')) {
                 try {
                     $cacheDir = storage_path('app/public/yolo_cache');
@@ -213,21 +221,25 @@ class YoloService
                     }
                     $cacheFile = $cacheDir . '/report_' . $photo->report_id . '_' . $photo->id . '_' . ($photo->file_name ?: 'foto-1.jpg');
 
-                    $ch = curl_init($photo->file_url);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-                    $data = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
-
-                    if ($httpCode === 200 && strlen($data) > 500) {
-                        file_put_contents($cacheFile, $data);
+                    if (file_exists($cacheFile) && filesize($cacheFile) > 1000) {
                         $imageTarget = $cacheFile;
-                        $tempDownloaded = true;
                     } else {
-                        $imageTarget = $photo->file_url;
+                        $ch = curl_init($photo->file_url);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+                        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+                        $data = curl_exec($ch);
+                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        curl_close($ch);
+
+                        if ($httpCode === 200 && strlen($data) > 500) {
+                            file_put_contents($cacheFile, $data);
+                            $imageTarget = $cacheFile;
+                        } else {
+                            $imageTarget = $photo->file_url;
+                        }
                     }
                 } catch (\Throwable $e) {
                     $imageTarget = $photo->file_url;
@@ -244,10 +256,10 @@ class YoloService
                 }
             }
 
-            // Execute custom YOLO detector with timeout guard (18s max to prevent Render 502 timeout)
+            // Execute custom YOLO detector with generous timeout (60s)
             if ($imageTarget && file_exists($this->scriptPath)) {
                 try {
-                    $process = Process::timeout(18)->run([
+                    $process = Process::timeout(60)->run([
                         $this->pythonPath,
                         $this->scriptPath,
                         '--image',
@@ -263,23 +275,13 @@ class YoloService
                     Log::warning('YoloService execution timeout/notice: ' . $e->getMessage());
                 }
             }
-
-            // Clean up temporary download file
-            if ($tempDownloaded && $imageTarget && file_exists($imageTarget)) {
-                @unlink($imageTarget);
-            }
         }
 
-        // 4. Default to normal/unprocessed only if YOLO engine fails completely (no fabricated defects!)
+        // 4. If YOLO engine failed completely, do NOT fabricate 0-defect detection!
         if (!$outputJson || empty($outputJson['success'])) {
-            $outputJson = [
-                'success' => true,
-                'total_defects' => 0,
-                'confidence_score' => 0.0,
-                'detected_classes' => ['landslide' => 0, 'pothole' => 0, 'crack' => 0],
-                'damaged_area_sqm' => 0.0,
-                'bounding_boxes' => [],
-                'model_version' => 'model_terbaru_kaggle.pt',
+            return [
+                'success' => false,
+                'message' => 'YOLO engine belum berhasil menganalisis foto: ' . ($outputJson['error'] ?? 'timeout atau respon kosong'),
             ];
         }
 

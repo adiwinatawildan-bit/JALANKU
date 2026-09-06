@@ -31,9 +31,9 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[s
 
             req = urllib.request.Request(
                 image_path,
-                headers={"User-Agent": "JALANKU-YOLO-Engine/2.0"}
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             )
-            with urllib.request.urlopen(req, timeout=15) as response, open(temp_download_path, "wb") as out_file:
+            with urllib.request.urlopen(req, timeout=25) as response, open(temp_download_path, "wb") as out_file:
                 out_file.write(response.read())
             target_image_path = temp_download_path
         except Exception as e:
@@ -66,14 +66,14 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[s
     }
 
     try:
-        # Suppress ultralytics banner and limit thread usage to prevent OOM on cloud containers
+        # Suppress ultralytics banner and allocate 2 threads for fast inference
         os.environ["YOLO_VERBOSE"] = "False"
-        os.environ["OMP_NUM_THREADS"] = "1"
-        os.environ["OPENBLAS_NUM_THREADS"] = "1"
-        os.environ["MKL_NUM_THREADS"] = "1"
+        os.environ["OMP_NUM_THREADS"] = "2"
+        os.environ["OPENBLAS_NUM_THREADS"] = "2"
+        os.environ["MKL_NUM_THREADS"] = "2"
 
         import torch
-        torch.set_num_threads(1)
+        torch.set_num_threads(2)
         torch.set_grad_enabled(False)
 
         from ultralytics import YOLO

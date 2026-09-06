@@ -59,7 +59,7 @@
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="text-sm font-bold text-navy-900 flex items-center">
                     <span class="w-2.5 h-2.5 rounded-full bg-sky-500 mr-2"></span>
-                    Belum Diverifikasi ({{ $actionRequired['belum_diverifikasi']->count() }})
+                    Belum Diverifikasi ({{ $stats['laporan_baru'] }})
                 </h3>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-50 text-sky-700">Perlu Review</span>
             </div>
@@ -79,6 +79,14 @@
                     <p class="text-xs text-slate-400 text-center py-4">Semua laporan telah diverifikasi.</p>
                 @endforelse
             </div>
+
+            @if($stats['laporan_baru'] > 5)
+                <div class="pt-2 text-center border-t border-slate-100">
+                    <a href="{{ route('admin.reports.index', ['status' => 'Diajukan']) }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700">
+                        Lihat Semua ({{ $stats['laporan_baru'] }}) &rarr;
+                    </a>
+                </div>
+            @endif
         </div>
 
         <!-- Action 2: Belum Ditugaskan -->
@@ -86,7 +94,7 @@
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="text-sm font-bold text-navy-900 flex items-center">
                     <span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2"></span>
-                    Belum Ditugaskan ke OPD
+                    Belum Ditugaskan ke OPD ({{ $stats['diverifikasi'] }})
                 </h3>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Tugaskan</span>
             </div>
@@ -106,6 +114,14 @@
                     <p class="text-xs text-slate-400 text-center py-4">Tidak ada laporan antrean penugasan.</p>
                 @endforelse
             </div>
+
+            @if($stats['diverifikasi'] > 5)
+                <div class="pt-2 text-center border-t border-slate-100">
+                    <a href="{{ route('admin.reports.index', ['status' => 'Diverifikasi']) }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700">
+                        Lihat Semua ({{ $stats['diverifikasi'] }}) &rarr;
+                    </a>
+                </div>
+            @endif
         </div>
 
         <!-- Action 3: Terlambat / Tidak ada update -->
@@ -294,22 +310,11 @@
                 <h3 class="text-sm font-bold text-navy-900 flex items-center">
                     <i class="fa-solid fa-chart-area text-amber-500 mr-2"></i> {{ $chartTitle ?? 'Tren Laporan Masuk' }}
                 </h3>
-                <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center space-x-2">
-                    <input type="hidden" name="view" value="{{ $viewMode }}">
+                <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center">
                     <div class="relative flex items-center">
                         <input type="month" name="month" value="{{ $selectedMonth }}" onchange="this.form.submit()" 
-                            class="px-2.5 py-1 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm"
+                            class="px-3 py-1.5 text-xs font-bold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-sm"
                             title="Pilih Bulan & Tahun dari Kalender">
-                    </div>
-                    <div class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[10px] font-bold">
-                        <a href="{{ route('admin.dashboard', ['view' => 'month', 'month' => $selectedMonth]) }}" 
-                           class="px-2 py-0.5 rounded-md transition {{ $viewMode === 'month' ? 'bg-white text-navy-950 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
-                            Harian
-                        </a>
-                        <a href="{{ route('admin.dashboard', ['view' => 'year', 'year' => $selectedYear, 'month' => $selectedMonth]) }}" 
-                           class="px-2 py-0.5 rounded-md transition {{ $viewMode === 'year' ? 'bg-white text-navy-950 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
-                            12 Bulan
-                        </a>
                     </div>
                 </form>
             </div>
