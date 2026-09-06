@@ -191,23 +191,29 @@
                                     $totalDefects = $detections->sum('total_defects');
 
                                     if ($landslides > 0) {
-                                        $label = "LANDSLIDE ({$landslides}x)";
+                                        $label = "Longsor ({$landslides} Titik)";
                                         $badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
                                         $icon = "fa-triangle-exclamation";
                                     } elseif ($potholes > 0) {
-                                        $label = "POTHOLE ({$potholes} Lubang)";
+                                        $label = "Lubang ({$potholes} Titik)";
                                         $badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
                                         $icon = "fa-circle-dot";
                                     } elseif ($cracks > 0) {
-                                        $label = "CRACK ({$cracks} Retak)";
+                                        $label = "Retak ({$cracks} Titik)";
                                         $badgeStyle = "bg-sky-50 text-sky-700 border-sky-200";
                                         $icon = "fa-bolt";
                                     } elseif ($detections->isNotEmpty() && $totalDefects === 0) {
-                                        $label = "NORMAL / BAIK";
+                                        $label = "Kondisi Baik";
                                         $badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
                                         $icon = "fa-circle-check";
                                     } else {
-                                        $label = strtoupper($rep->damage_type ?? 'NORMAL') . " (" . strtoupper($rep->disturbance_level ?? 'RINGAN') . ")";
+                                        $damageName = match($rep->damage_type) {
+                                            'landslide' => 'Longsor',
+                                            'pothole' => 'Lubang Jalan',
+                                            'crack' => 'Retak Jalan',
+                                            default => 'Kerusakan Jalan'
+                                        };
+                                        $label = $damageName . " (" . ucfirst($rep->disturbance_level ?? 'Sedang') . ")";
                                         $badgeStyle = "bg-slate-100 text-slate-700 border-slate-200";
                                         $icon = "fa-road";
                                     }

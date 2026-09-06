@@ -46,7 +46,6 @@ class ReportController extends Controller
         $stats = [
             'total_laporan' => $myReports->count(),
             'diproses' => $myReports->whereIn('status', [
-                Report::STATUS_DIAJUKAN,
                 Report::STATUS_DIVERIFIKASI,
                 Report::STATUS_DITUGASKAN,
                 Report::STATUS_SURVEI,

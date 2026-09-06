@@ -98,9 +98,21 @@
                         <span class="text-[10px] text-slate-500 block">{{ $report->desa }}</span>
                     </div>
                     <div>
-                        <span class="text-slate-400 block font-semibold">Jenis / Tingkat Cacat</span>
-                        <span class="font-bold text-navy-900">{{ ucfirst($report->damage_type) }}</span>
-                        <span class="text-[10px] text-slate-500 block">Tingkat: {{ ucfirst($report->disturbance_level) }}</span>
+                        <span class="text-slate-400 block font-semibold">Klasifikasi Cacat</span>
+                        <span class="font-bold text-navy-900">
+                            @if($report->damage_type === 'landslide')
+                                Longsor / Amblas
+                            @elseif($report->damage_type === 'pothole')
+                                Lubang Jalan
+                            @elseif($report->damage_type === 'crack')
+                                Retak Jalan
+                            @elseif($report->damage_type && !in_array($report->damage_type, ['lainnya', 'other']))
+                                {{ ucfirst($report->damage_type) }}
+                            @else
+                                Deteksi Otomatis AI
+                            @endif
+                        </span>
+                        <span class="text-[10px] text-slate-500 block">Tingkat: {{ ucfirst($report->disturbance_level ?? 'Normal') }}</span>
                     </div>
                     <div>
                         <span class="text-slate-400 block font-semibold">Koordinat GPS</span>

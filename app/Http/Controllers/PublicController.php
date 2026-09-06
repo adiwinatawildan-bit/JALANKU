@@ -16,7 +16,6 @@ class PublicController extends Controller
         $stats = [
             'total_pengaduan' => Report::count(),
             'sedang_diproses' => Report::whereIn('status', [
-                Report::STATUS_DIAJUKAN,
                 Report::STATUS_DIVERIFIKASI,
                 Report::STATUS_DITUGASKAN,
                 Report::STATUS_SURVEI,
