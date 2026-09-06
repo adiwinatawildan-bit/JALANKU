@@ -266,29 +266,57 @@
 
             <!-- PENUGASAN KE OPD (DIVERIFIKASI -> DITUGASKAN) -->
             <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <h3 class="text-base font-bold text-navy-900 border-b border-slate-100 pb-3 flex items-center">
-                    <i class="fa-solid fa-building-circle-check text-sky-500 mr-2"></i> Penugasan OPD Terkait
-                </h3>
+                <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <h3 class="text-base font-bold text-navy-900 flex items-center">
+                        <i class="fa-solid fa-building-circle-check text-sky-500 mr-2"></i> Penugasan OPD Terkait
+                    </h3>
+                    @if($report->status === \App\Models\Report::STATUS_DIAJUKAN)
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center">
+                            <i class="fa-solid fa-lock mr-1"></i> Terkunci
+                        </span>
+                    @endif
+                </div>
 
-                <form method="POST" action="{{ route('admin.reports.assign', $report->id) }}" class="space-y-4">
-                    @csrf
-
-                    <div class="space-y-1">
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Pilih OPD Berwenang</label>
-                        <select name="opd_id" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
-                            <option value="">-- Pilih Dinas / Instansi --</option>
-                            @foreach($opds as $opd)
-                                <option value="{{ $opd->id }}" {{ $report->opd_id == $opd->id ? 'selected' : '' }}>
-                                    {{ $opd->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                @if($report->status === \App\Models\Report::STATUS_DIAJUKAN)
+                    <div class="p-4 bg-amber-50/80 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-3">
+                        <div class="flex items-start space-x-2.5">
+                            <i class="fa-solid fa-circle-exclamation text-amber-600 text-base mt-0.5"></i>
+                            <div class="space-y-1">
+                                <p class="font-bold text-amber-950">Laporan Belum Diverifikasi</p>
+                                <p class="text-[11px] leading-relaxed text-amber-800">
+                                    Laporan ini masih berstatus <strong>DIAJUKAN</strong>. Sesuai SOP, admin pengawas harus memvalidasi keaslian pengaduan terlebih dahulu sebelum dapat mendisposisikan tugas ke dinas terkait (OPD).
+                                </p>
+                            </div>
+                        </div>
+                        <form method="POST" action="{{ route('admin.reports.verify', $report->id) }}" class="pt-1">
+                            @csrf
+                            <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span>Verifikasi Laporan Sekarang</span>
+                            </button>
+                        </form>
                     </div>
+                @else
+                    <form method="POST" action="{{ route('admin.reports.assign', $report->id) }}" class="space-y-4">
+                        @csrf
 
-                    <button type="submit" class="w-full py-2.5 bg-navy-900 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow transition">
-                        <i class="fa-solid fa-paper-plane mr-1.5"></i> Tugaskan Sekarang
-                    </button>
-                </form>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Pilih OPD Berwenang</label>
+                            <select name="opd_id" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <option value="">-- Pilih Dinas / Instansi --</option>
+                                @foreach($opds as $opd)
+                                    <option value="{{ $opd->id }}" {{ $report->opd_id == $opd->id ? 'selected' : '' }}>
+                                        {{ $opd->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <button type="submit" class="w-full py-2.5 bg-navy-900 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow transition">
+                            <i class="fa-solid fa-paper-plane mr-1.5"></i> {{ $report->opd_id ? 'Ubah / Perbarui Penugasan' : 'Tugaskan Sekarang' }}
+                        </button>
+                    </form>
+                @endif
             </div>
 
             <!-- Riwayat Status Perpindahan -->
