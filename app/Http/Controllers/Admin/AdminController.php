@@ -19,7 +19,6 @@ use App\Services\YoloService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
@@ -70,48 +69,71 @@ class AdminController extends Controller
             'terlambat' => Report::with(['location', 'opd'])
                 ->whereIn('status', [Report::STATUS_DITUGASKAN, Report::STATUS_SURVEI, Report::STATUS_SEDANG_DIPERBAIKI])
                 ->where('updated_at', '<', now()->subDays(14))
-                ->latest()
+                ->latest('updated_at')
                 ->take(5)
                 ->get(),
         ];
 
-        // Sebaran Kerusakan
-        $damageTypes = Report::select('damage_type', DB::raw('count(*) as count'))
-            ->groupBy('damage_type')
-            ->pluck('count', 'damage_type')
-            ->toArray();
-
-        // 10 Laporan Prioritas Tertinggi (SPK TOPSIS)
-        $topPriorities = PriorityResult::with(['report.location', 'report.opd'])
-            ->whereHas('report', fn($q) => $q->whereNotIn('status', [Report::STATUS_SELESAI, Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT]))
-            ->orderBy('rank')
+        // TOP 10 Prioritas (TOPSIS)
+        $topPriorities = Report::with(['location', 'priorityResult', 'opd', 'photos'])
+            ->whereNotIn('status', [Report::STATUS_SELESAI, Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
+            ->whereHas('priorityResult')
+            ->join('priority_results', 'reports.id', '=', 'priority_results.report_id')
+            ->orderBy('priority_results.score', 'desc')
+            ->select('reports.*')
             ->take(10)
             ->get();
 
-        // Riwayat Aktivitas Audit
-        $recentLogs = AuditLog::with('user')->latest()->take(10)->get();
+        // Chart Data (SQLite, Postgres & MySQL compatible)
+        $driver = DB::getDriverName();
+        if ($driver === 'sqlite') {
+            $monthExpr = "strftime('%Y-%m', created_at)";
+        } elseif ($driver === 'pgsql') {
+            $monthExpr = "TO_CHAR(created_at, 'YYYY-MM')";
+        } else {
+            $monthExpr = "DATE_FORMAT(created_at, '%Y-%m')";
+        }
 
-        return view('admin.dashboard', compact('stats', 'actionRequired', 'damageTypes', 'topPriorities', 'recentLogs'));
+        $monthlyData = Report::select(
+                DB::raw("{$monthExpr} as month"),
+                DB::raw('count(*) as count')
+            )
+            ->groupBy(DB::raw($monthExpr))
+            ->orderBy(DB::raw($monthExpr), 'asc')
+            ->take(6)
+            ->get();
+
+        $damageTypeData = Report::select('damage_type', DB::raw('count(*) as count'))
+            ->groupBy('damage_type')
+            ->pluck('count', 'damage_type');
+
+        $opdList = Opd::where('is_active', true)->get();
+
+        return view('admin.dashboard', compact(
+            'stats',
+            'actionRequired',
+            'topPriorities',
+            'monthlyData',
+            'damageTypeData',
+            'opdList'
+        ));
     }
 
     public function reports(Request $request)
     {
-        $query = Report::with(['user', 'location', 'opd', 'priorityResult', 'photos']);
+        $query = Report::with(['user', 'location', 'photos', 'opd', 'priorityResult', 'damageDetections']);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('kecamatan')) {
-            $query->where('kecamatan', $request->kecamatan);
-        }
-
-        if ($request->filled('damage_type')) {
-            $query->where('damage_type', $request->damage_type);
-        }
-
         if ($request->filled('opd_id')) {
             $query->where('opd_id', $request->opd_id);
+        }
+
+        if ($request->filled('priority')) {
+            $priority = $request->priority;
+            $query->whereHas('priorityResult', fn($q) => $q->where('priority_level', $priority));
         }
 
         if ($request->filled('q')) {
@@ -161,7 +183,6 @@ class AdminController extends Controller
         $admin = Auth::user();
         $report = Report::findOrFail($id);
 
-        $fromStatus = $report->status;
         $report->update([
             'status' => Report::STATUS_DIVERIFIKASI,
             'verified_by' => $admin->id,
@@ -170,7 +191,7 @@ class AdminController extends Controller
 
         ReportStatusHistory::create([
             'report_id' => $report->id,
-            'from_status' => $fromStatus,
+            'from_status' => Report::STATUS_DIAJUKAN,
             'to_status' => Report::STATUS_DIVERIFIKASI,
             'notes' => 'Laporan telah diverifikasi oleh tim Admin Pengawas.',
             'changed_by' => $admin->id,
@@ -180,13 +201,13 @@ class AdminController extends Controller
         try {
             $this->yoloService->analyzeReport($report, $admin->id);
         } catch (\Throwable $e) {
-            Log::warning('YOLO analysis notice during verify: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('YOLO analysis notice: ' . $e->getMessage());
         }
 
         try {
             $this->topsisService->calculateAll();
         } catch (\Throwable $e) {
-            Log::warning('TOPSIS calculation notice during verify: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('TOPSIS notice: ' . $e->getMessage());
         }
 
         // Notify citizen
@@ -200,21 +221,17 @@ class AdminController extends Controller
                     'link_url' => route('masyarakat.reports.show', $report->id),
                 ]);
             } catch (\Throwable $e) {
-                Log::warning('Notification notice during verify: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::warning('Notification notice: ' . $e->getMessage());
             }
         }
 
-        try {
-            AuditLog::record(
-                activity: 'Verifikasi Laporan #' . $report->ticket_number,
-                targetType: 'Report',
-                targetId: $report->id,
-                description: "Admin {$admin->name} memverifikasi laporan di {$report->road_name}.",
-                userId: $admin->id
-            );
-        } catch (\Throwable $e) {
-            Log::warning('AuditLog notice during verify: ' . $e->getMessage());
-        }
+        AuditLog::record(
+            activity: 'Verifikasi Laporan #' . $report->ticket_number,
+            targetType: 'Report',
+            targetId: $report->id,
+            description: "Admin {$admin->name} memverifikasi laporan di {$report->road_name}.",
+            userId: $admin->id
+        );
 
         return back()->with('success', "Laporan #{$report->ticket_number} berhasil diverifikasi.");
     }
@@ -242,31 +259,21 @@ class AdminController extends Controller
             'changed_by' => $admin->id,
         ]);
 
-        if ($report->user_id) {
-            try {
-                Notification::create([
-                    'user_id' => $report->user_id,
-                    'type' => 'alert',
-                    'title' => 'Laporan Tidak Dapat Diproses',
-                    'message' => "Laporan #{$report->ticket_number} ditolak. Alasan: {$validated['rejection_reason']}",
-                    'link_url' => route('masyarakat.reports.show', $report->id),
-                ]);
-            } catch (\Throwable $e) {
-                Log::warning('Notification notice during reject: ' . $e->getMessage());
-            }
-        }
+        Notification::create([
+            'user_id' => $report->user_id,
+            'type' => 'alert',
+            'title' => 'Laporan Tidak Dapat Diproses',
+            'message' => "Laporan #{$report->ticket_number} ditolak. Alasan: {$validated['rejection_reason']}",
+            'link_url' => route('masyarakat.reports.show', $report->id),
+        ]);
 
-        try {
-            AuditLog::record(
-                activity: 'Penolakan Laporan #' . $report->ticket_number,
-                targetType: 'Report',
-                targetId: $report->id,
-                description: "Admin menolak laporan dengan alasan: {$validated['rejection_reason']}",
-                userId: $admin->id
-            );
-        } catch (\Throwable $e) {
-            Log::warning('AuditLog notice during reject: ' . $e->getMessage());
-        }
+        AuditLog::record(
+            activity: 'Penolakan Laporan #' . $report->ticket_number,
+            targetType: 'Report',
+            targetId: $report->id,
+            description: "Admin menolak laporan dengan alasan: {$validated['rejection_reason']}",
+            userId: $admin->id
+        );
 
         return back()->with('success', 'Laporan telah ditandai sebagai ditolak.');
     }
@@ -301,23 +308,15 @@ class AdminController extends Controller
             'changed_by' => $admin->id,
         ]);
 
-        try {
-            $this->topsisService->calculateAll();
-        } catch (\Throwable $e) {
-            Log::warning('TOPSIS notice during markDuplicate: ' . $e->getMessage());
-        }
+        $this->topsisService->calculateAll();
 
-        try {
-            AuditLog::record(
-                activity: 'Penandaan Laporan Duplikat #' . $report->ticket_number,
-                targetType: 'Report',
-                targetId: $report->id,
-                description: "Laporan digabungkan ke laporan utama #{$targetReport->ticket_number}.",
-                userId: $admin->id
-            );
-        } catch (\Throwable $e) {
-            Log::warning('AuditLog notice during markDuplicate: ' . $e->getMessage());
-        }
+        AuditLog::record(
+            activity: 'Penandaan Laporan Duplikat #' . $report->ticket_number,
+            targetType: 'Report',
+            targetId: $report->id,
+            description: "Laporan digabungkan ke laporan utama #{$targetReport->ticket_number}.",
+            userId: $admin->id
+        );
 
         return back()->with('success', "Laporan berhasil ditandai sebagai duplikat dari #{$targetReport->ticket_number}.");
     }
@@ -339,66 +338,44 @@ class AdminController extends Controller
             'status' => Report::STATUS_DITUGASKAN,
             'assigned_by' => $admin->id,
             'assigned_at' => now(),
-            'verified_by' => $report->verified_by ?? $admin->id,
-            'verified_at' => $report->verified_at ?? now(),
         ]);
 
         ReportStatusHistory::create([
             'report_id' => $report->id,
             'from_status' => $oldStatus,
             'to_status' => Report::STATUS_DITUGASKAN,
-            'notes' => "Laporan ditugaskan kepada OPD: {$opd->name}" . ($oldStatus === Report::STATUS_DIAJUKAN ? ' (Langsung ditugaskan)' : ''),
+            'notes' => "Laporan ditugaskan kepada OPD: {$opd->name}",
             'changed_by' => $admin->id,
         ]);
 
-        try {
-            $this->topsisService->calculateAll();
-        } catch (\Throwable $e) {
-            Log::warning('TOPSIS notice during assign: ' . $e->getMessage());
-        }
-
         // Notify OPD officers
-        try {
-            $officers = User::where('opd_id', $opd->id)->get();
-            foreach ($officers as $officer) {
-                Notification::create([
-                    'user_id' => $officer->id,
-                    'type' => 'warning',
-                    'title' => 'Tugas Perbaikan Baru',
-                    'message' => "Laporan baru #{$report->ticket_number} di {$report->road_name} telah ditugaskan ke OPD Anda.",
-                    'link_url' => route('opd.tasks.show', $report->id),
-                ]);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('OPD notification notice: ' . $e->getMessage());
+        $officers = User::where('opd_id', $opd->id)->get();
+        foreach ($officers as $officer) {
+            Notification::create([
+                'user_id' => $officer->id,
+                'type' => 'warning',
+                'title' => 'Tugas Perbaikan Baru',
+                'message' => "Laporan baru #{$report->ticket_number} di {$report->road_name} telah ditugaskan ke OPD Anda.",
+                'link_url' => route('opd.tasks.show', $report->id),
+            ]);
         }
 
         // Notify citizen
-        if ($report->user_id) {
-            try {
-                Notification::create([
-                    'user_id' => $report->user_id,
-                    'type' => 'info',
-                    'title' => 'Laporan Diteruskan ke OPD',
-                    'message' => "Laporan Anda (#{$report->ticket_number}) telah ditugaskan ke {$opd->name} untuk dilakukan survei dan penanganan.",
-                    'link_url' => route('masyarakat.reports.show', $report->id),
-                ]);
-            } catch (\Throwable $e) {
-                Log::warning('Citizen notification notice: ' . $e->getMessage());
-            }
-        }
+        Notification::create([
+            'user_id' => $report->user_id,
+            'type' => 'info',
+            'title' => 'Laporan Diteruskan ke OPD',
+            'message' => "Laporan Anda (#{$report->ticket_number}) telah ditugaskan ke {$opd->name} untuk dilakukan survei dan penanganan.",
+            'link_url' => route('masyarakat.reports.show', $report->id),
+        ]);
 
-        try {
-            AuditLog::record(
-                activity: 'Penugasan Laporan ke OPD',
-                targetType: 'Report',
-                targetId: $report->id,
-                description: "Laporan #{$report->ticket_number} ditugaskan ke {$opd->name}.",
-                userId: $admin->id
-            );
-        } catch (\Throwable $e) {
-            Log::warning('AuditLog notice during assign: ' . $e->getMessage());
-        }
+        AuditLog::record(
+            activity: 'Penugasan Laporan ke OPD',
+            targetType: 'Report',
+            targetId: $report->id,
+            description: "Laporan #{$report->ticket_number} ditugaskan ke {$opd->name}.",
+            userId: $admin->id
+        );
 
         return back()->with('success', "Laporan berhasil ditugaskan ke {$opd->name}.");
     }
@@ -408,16 +385,13 @@ class AdminController extends Controller
         $admin = Auth::user();
         $report = Report::with('photos')->findOrFail($id);
 
-        try {
-            $result = $this->yoloService->analyzeReport($report, $admin->id);
-            if ($result['success']) {
-                return back()->with('success', "Analisis YOLO selesai. Ditemukan {$result['total_defects']} titik kerusakan (Confidence: {$result['confidence']}%).");
-            }
-            return back()->with('error', $result['message'] ?? 'Gagal menjalankan analisis foto YOLO.');
-        } catch (\Throwable $e) {
-            Log::error('Yolo analysis error: ' . $e->getMessage());
-            return back()->with('error', 'Terjadi kendala saat analisis AI: ' . $e->getMessage());
+        $result = $this->yoloService->analyzeReport($report, $admin->id);
+
+        if ($result['success']) {
+            return back()->with('success', "Analisis YOLO selesai. Ditemukan {$result['total_defects']} titik kerusakan (Confidence: {$result['confidence']}%).");
         }
+
+        return back()->with('error', $result['message'] ?? 'Gagal menjalankan analisis foto YOLO.');
     }
 
     public function recalculateTopsis()
