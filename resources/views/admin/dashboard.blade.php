@@ -82,7 +82,7 @@
 
             @if($stats['laporan_baru'] > 5)
                 <div class="pt-2 text-center border-t border-slate-100">
-                    <a href="{{ route('admin.reports.index', ['status' => 'Diajukan']) }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700">
+                    <a href="{{ route('admin.reports.index', ['status' => 'DIAJUKAN']) }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700">
                         Lihat Semua ({{ $stats['laporan_baru'] }}) &rarr;
                     </a>
                 </div>
@@ -117,7 +117,7 @@
 
             @if($stats['diverifikasi'] > 5)
                 <div class="pt-2 text-center border-t border-slate-100">
-                    <a href="{{ route('admin.reports.index', ['status' => 'Diverifikasi']) }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700">
+                    <a href="{{ route('admin.reports.index', ['status' => 'DIVERIFIKASI']) }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700">
                         Lihat Semua ({{ $stats['diverifikasi'] }}) &rarr;
                     </a>
                 </div>
@@ -346,7 +346,12 @@
             chart: { type: 'area', height: 250, toolbar: { show: false } },
             stroke: { curve: 'smooth', width: 2 },
             colors: ['#f59e0b'],
-            xaxis: { categories: mCategories.length ? mCategories : ['-'] },
+            xaxis: {
+                categories: mCategories.length ? mCategories : ['-'],
+                labels: { show: false },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
             yaxis: {
                 min: 0,
                 forceNiceScale: true,
@@ -356,6 +361,9 @@
                         return Math.round(val);
                     }
                 }
+            },
+            tooltip: {
+                x: { show: true }
             },
             dataLabels: { enabled: false }
         };
