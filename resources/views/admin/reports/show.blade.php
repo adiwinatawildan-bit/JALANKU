@@ -206,7 +206,11 @@
                     </div>
                     @if($detections->isNotEmpty())
                         <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            Confidence: {{ $maxConfidence }}%
+                            @if($totalDefects > 0)
+                                Confidence: {{ $maxConfidence }}%
+                            @else
+                                Jalan Normal (0 Cacat)
+                            @endif
                         </span>
                     @endif
                 </div>

@@ -265,7 +265,7 @@ class YoloService
                         '--image',
                         (string) $imageTarget,
                         '--conf',
-                        '0.15'
+                        '0.05'
                     ]);
                     $rawOutput = $process->output();
                     if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {

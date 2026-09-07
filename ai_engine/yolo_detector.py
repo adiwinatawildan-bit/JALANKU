@@ -15,7 +15,7 @@ import sys
 from typing import Any, Dict, List
 
 
-def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[str, Any]:
+def analyze_image(image_path: str, confidence_threshold: float = 0.05) -> Dict[str, Any]:
     """Analyze road damage strictly using the user's custom trained Kaggle YOLO model (model_terbaru_kaggle.pt)."""
     import tempfile
     import urllib.request
@@ -154,7 +154,7 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[s
         else:
             # Road is normal / no defect detected by the model
             results["total_defects"] = 0
-            results["confidence_score"] = 98.0
+            results["confidence_score"] = 0.0
             results["detected_classes"]["pothole"] = 0
             results["detected_classes"]["crack"] = 0
             results["detected_classes"]["landslide"] = 0
@@ -177,7 +177,7 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.15) -> Dict[s
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="YOLO Road Damage Detector")
     parser.add_argument("--image", type=str, required=True, help="Path to image file or URL")
-    parser.add_argument("--conf", type=float, default=0.15, help="Confidence threshold")
+    parser.add_argument("--conf", type=float, default=0.05, help="Confidence threshold")
 
     args = parser.parse_args()
     output = analyze_image(args.image, args.conf)
