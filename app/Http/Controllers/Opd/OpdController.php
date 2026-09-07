@@ -50,7 +50,15 @@ class OpdController extends Controller
                 ->count(),
         ];
 
-        $tasks = $allReports->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])->take(15);
+        $assignedStatuses = [
+            Report::STATUS_DITUGASKAN,
+            Report::STATUS_SURVEI,
+            Report::STATUS_MENUNGGU_PERBAIKAN,
+            Report::STATUS_SEDANG_DIPERBAIKI,
+            Report::STATUS_SELESAI
+        ];
+
+        $tasks = $allReports->whereIn('status', $assignedStatuses)->take(15);
 
         return view('opd.dashboard', compact('stats', 'tasks', 'user'));
     }
@@ -58,11 +66,21 @@ class OpdController extends Controller
     public function tasks(Request $request)
     {
         $user = Auth::user();
+        $assignedStatuses = [
+            Report::STATUS_DITUGASKAN,
+            Report::STATUS_SURVEI,
+            Report::STATUS_MENUNGGU_PERBAIKAN,
+            Report::STATUS_SEDANG_DIPERBAIKI,
+            Report::STATUS_SELESAI
+        ];
+
         $query = Report::with(['location', 'photos', 'priorityResult', 'progressUpdates.photos'])
-            ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT]);
+            ->whereIn('status', $assignedStatuses);
 
         if ($user->opd_id) {
             $query->where('opd_id', $user->opd_id);
+        } else {
+            $query->whereNotNull('opd_id');
         }
 
         if ($request->filled('status')) {
@@ -101,6 +119,18 @@ class OpdController extends Controller
         }
 
         $report = $query->findOrFail($id);
+
+        if (!in_array($report->status, [
+            Report::STATUS_DITUGASKAN,
+            Report::STATUS_SURVEI,
+            Report::STATUS_MENUNGGU_PERBAIKAN,
+            Report::STATUS_SEDANG_DIPERBAIKI,
+            Report::STATUS_SELESAI
+        ])) {
+            return redirect()->route('opd.tasks.index')
+                ->with('error', 'Laporan ini belum diverifikasi atau belum ditugaskan oleh Admin kepada OPD.');
+        }
+
         $nextWeekNumber = ($report->progressUpdates()->max('week_number') ?? 0) + 1;
 
         return view('opd.tasks.show', compact('report', 'nextWeekNumber'));
@@ -110,6 +140,10 @@ class OpdController extends Controller
     {
         $user = Auth::user();
         $report = Report::findOrFail($id);
+
+        if (!in_array($report->status, [Report::STATUS_DITUGASKAN, Report::STATUS_SURVEI])) {
+            return back()->with('error', 'Survei hanya dapat dilakukan pada laporan yang telah ditugaskan oleh Admin.');
+        }
 
         $validated = $request->validate([
             'survey_notes' => ['required', 'string'],
@@ -179,6 +213,15 @@ class OpdController extends Controller
         // 29, 30, 33, 36. FOTO DAN PROGRES MINGGUAN (Maksimal 3 Foto per minggu)
         $user = Auth::user();
         $report = Report::findOrFail($id);
+
+        if (!in_array($report->status, [
+            Report::STATUS_DITUGASKAN,
+            Report::STATUS_SURVEI,
+            Report::STATUS_MENUNGGU_PERBAIKAN,
+            Report::STATUS_SEDANG_DIPERBAIKI
+        ])) {
+            return back()->with('error', 'Update progres fisik hanya dapat dilakukan setelah laporan resmi ditugaskan oleh Admin.');
+        }
 
         $validated = $request->validate([
             'week_number' => ['required', 'integer', 'min:1'],

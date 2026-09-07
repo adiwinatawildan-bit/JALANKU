@@ -98,7 +98,7 @@
             @endif
 
             <!-- FORM 2: 29 & 30. UPDATE PROGRES MINGGUAN -->
-            @if($report->status !== \App\Models\Report::STATUS_SELESAI)
+            @if(in_array($report->status, [\App\Models\Report::STATUS_DITUGASKAN, \App\Models\Report::STATUS_SURVEI, \App\Models\Report::STATUS_MENUNGGU_PERBAIKAN, \App\Models\Report::STATUS_SEDANG_DIPERBAIKI]))
                 <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                     <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
                         <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">
