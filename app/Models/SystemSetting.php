@@ -13,29 +13,49 @@ class SystemSetting extends Model
         'type',
     ];
 
+    protected static ?array $cachedSettings = null;
+
     public static function get(string $key, mixed $default = null): mixed
     {
-        $setting = self::where('key', $key)->first();
-        if (!$setting) {
+        if (self::$cachedSettings === null) {
+            self::$cachedSettings = \Illuminate\Support\Facades\Cache::remember('all_system_settings_cache', 3600, function () {
+                try {
+                    return self::all()->keyBy('key')->toArray();
+                } catch (\Throwable $e) {
+                    return [];
+                }
+            });
+        }
+
+        if (!isset(self::$cachedSettings[$key])) {
             return $default;
         }
 
-        return match ($setting->type) {
-            'boolean' => filter_var($setting->value, FILTER_VALIDATE_BOOLEAN),
-            'integer' => (int) $setting->value,
-            'float' => (float) $setting->value,
-            'json' => json_decode($setting->value, true) ?? $default,
-            default => $setting->value,
+        $setting = self::$cachedSettings[$key];
+        $type = $setting['type'] ?? 'string';
+        $val = $setting['value'] ?? null;
+
+        return match ($type) {
+            'boolean' => filter_var($val, FILTER_VALIDATE_BOOLEAN),
+            'integer' => (int) $val,
+            'float' => (float) $val,
+            'json' => json_decode($val, true) ?? $default,
+            default => $val ?? $default,
         };
     }
 
     public static function set(string $key, mixed $value, string $group = 'general', string $type = 'string'): self
     {
         $strValue = is_array($value) ? json_encode($value) : (string) $value;
-        return self::updateOrCreate(
+        $setting = self::updateOrCreate(
             ['key' => $key],
             ['value' => $strValue, 'group' => $group, 'type' => $type]
         );
+
+        \Illuminate\Support\Facades\Cache::forget('all_system_settings_cache');
+        self::$cachedSettings = null;
+
+        return $setting;
     }
 
     public static function appName(): string

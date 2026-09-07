@@ -6,57 +6,65 @@ use App\Models\Facility;
 use App\Models\Opd;
 use App\Models\Report;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class PublicController extends Controller
 {
     public function index()
     {
-        // 13. STATISTIK LANDING PAGE (Real-time from MySQL)
-        $stats = [
-            'total_pengaduan' => Report::count(),
-            'sedang_diproses' => Report::whereIn('status', [
-                Report::STATUS_DIVERIFIKASI,
-                Report::STATUS_DITUGASKAN,
-                Report::STATUS_SURVEI,
-                Report::STATUS_MENUNGGU_PERBAIKAN
-            ])->count(),
-            'sedang_diperbaiki' => Report::where('status', Report::STATUS_SEDANG_DIPERBAIKI)->count(),
-            'selesai' => Report::where('status', Report::STATUS_SELESAI)->count(),
-        ];
+        $data = Cache::remember('public_landing_data', 45, function () {
+            // 1. STATISTIK LANDING PAGE (Single aggregated query instead of 4 separate queries)
+            $statsRow = DB::selectOne("
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN status IN ('" . Report::STATUS_DIVERIFIKASI . "', '" . Report::STATUS_DITUGASKAN . "', '" . Report::STATUS_SURVEI . "', '" . Report::STATUS_MENUNGGU_PERBAIKAN . "') THEN 1 END) as sedang_diproses,
+                    COUNT(CASE WHEN status = '" . Report::STATUS_SEDANG_DIPERBAIKI . "' THEN 1 END) as sedang_diperbaiki,
+                    COUNT(CASE WHEN status = '" . Report::STATUS_SELESAI . "' THEN 1 END) as selesai
+                FROM reports
+            ");
+            $stats = [
+                'total_pengaduan' => (int) ($statsRow->total ?? 0),
+                'sedang_diproses' => (int) ($statsRow->sedang_diproses ?? 0),
+                'sedang_diperbaiki' => (int) ($statsRow->sedang_diperbaiki ?? 0),
+                'selesai' => (int) ($statsRow->selesai ?? 0),
+            ];
 
-        // Recent reports for public feed
-        $recentReports = Report::with(['location', 'photos', 'progressUpdates.photos', 'priorityResult', 'opd'])
-            ->where('is_public', true)
-            ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
-            ->latest()
-            ->take(6)
-            ->get();
+            // Recent reports for public feed
+            $recentReports = Report::with(['location', 'photos', 'progressUpdates.photos', 'priorityResult', 'opd'])
+                ->where('is_public', true)
+                ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
+                ->latest()
+                ->take(6)
+                ->get();
 
-        // Active repair reports showcase
-        $repairShowcase = Report::with(['location', 'photos', 'progressUpdates.photos', 'opd'])
-            ->whereIn('status', [Report::STATUS_SEDANG_DIPERBAIKI, Report::STATUS_SELESAI])
-            ->has('progressUpdates')
-            ->latest('updated_at')
-            ->take(3)
-            ->get();
+            // Active repair reports showcase
+            $repairShowcase = Report::with(['location', 'photos', 'progressUpdates.photos', 'opd'])
+                ->whereIn('status', [Report::STATUS_SEDANG_DIPERBAIKI, Report::STATUS_SELESAI])
+                ->has('progressUpdates')
+                ->latest('updated_at')
+                ->take(3)
+                ->get();
 
-        // Reports for Live Feed interactive dropdown widget (Survei, Perbaikan, Selesai)
-        $liveFeedReports = Report::with(['location', 'photos', 'initialPhotos', 'surveyPhotos', 'progressUpdates.photos', 'opd'])
-            ->where('is_public', true)
-            ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
-            ->orderByRaw("CASE 
-                WHEN status = '" . Report::STATUS_SEDANG_DIPERBAIKI . "' THEN 1 
-                WHEN status = '" . Report::STATUS_SURVEI . "' THEN 2 
-                WHEN status = '" . Report::STATUS_DITUGASKAN . "' THEN 3 
-                WHEN status = '" . Report::STATUS_MENUNGGU_PERBAIKAN . "' THEN 4 
-                WHEN status = '" . Report::STATUS_SELESAI . "' THEN 5 
-                ELSE 6 END")
-            ->latest('updated_at')
-            ->take(10)
-            ->get();
+            // Reports for Live Feed interactive dropdown widget (Survei, Perbaikan, Selesai)
+            $liveFeedReports = Report::with(['location', 'photos', 'progressUpdates.photos', 'opd'])
+                ->where('is_public', true)
+                ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
+                ->orderByRaw("CASE 
+                    WHEN status = '" . Report::STATUS_SEDANG_DIPERBAIKI . "' THEN 1 
+                    WHEN status = '" . Report::STATUS_SURVEI . "' THEN 2 
+                    WHEN status = '" . Report::STATUS_DITUGASKAN . "' THEN 3 
+                    WHEN status = '" . Report::STATUS_MENUNGGU_PERBAIKAN . "' THEN 4 
+                    WHEN status = '" . Report::STATUS_SELESAI . "' THEN 5 
+                    ELSE 6 END")
+                ->latest('updated_at')
+                ->take(10)
+                ->get();
 
-        return view('public.index', compact('stats', 'recentReports', 'repairShowcase', 'liveFeedReports'));
+            return compact('stats', 'recentReports', 'repairShowcase', 'liveFeedReports');
+        });
+
+        return view('public.index', $data);
     }
 
     public function peta(Request $request)
@@ -194,58 +202,63 @@ class PublicController extends Controller
      */
     public function apiGeoReports(Request $request)
     {
-        $query = Report::with(['location', 'photos', 'priorityResult', 'opd'])
-            ->where('is_public', true)
-            ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
-            ->whereHas('location');
+        $cacheKey = 'geo_reports_' . md5(json_encode($request->only(['status', 'kecamatan', 'damage_type'])));
+        $response = Cache::remember($cacheKey, 45, function () use ($request) {
+            $query = Report::with(['location', 'photos', 'priorityResult', 'opd'])
+                ->where('is_public', true)
+                ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
+                ->whereHas('location');
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        if ($request->filled('kecamatan')) {
-            $query->where('kecamatan', $request->kecamatan);
-        }
-        if ($request->filled('damage_type')) {
-            $query->where('damage_type', $request->damage_type);
-        }
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+            if ($request->filled('kecamatan')) {
+                $query->where('kecamatan', $request->kecamatan);
+            }
+            if ($request->filled('damage_type')) {
+                $query->where('damage_type', $request->damage_type);
+            }
 
-        $reports = $query->get()->map(function ($r) {
-            $firstPhoto = $r->photos->first()?->file_url ?? asset('images/road-placeholder.svg');
+            $reports = $query->get()->map(function ($r) {
+                $firstPhoto = $r->photos->first()?->file_url ?? asset('images/road-placeholder.svg');
+                return [
+                    'id' => $r->id,
+                    'ticket_number' => $r->ticket_number,
+                    'title' => $r->title,
+                    'road_name' => $r->road_name,
+                    'kecamatan' => $r->kecamatan,
+                    'desa' => $r->desa,
+                    'status' => $r->status,
+                    'damage_type' => $r->damage_type_label,
+                    'disturbance_level' => ucfirst($r->disturbance_level),
+                    'progress' => $r->current_progress,
+                    'priority_level' => $r->priorityResult?->priority_level ?? 'Normal',
+                    'marker_color' => $r->marker_color,
+                    'latitude' => (float) $r->location->latitude,
+                    'longitude' => (float) $r->location->longitude,
+                    'photo_url' => $firstPhoto,
+                    'opd_name' => $r->opd?->name ?? 'Belum Ditugaskan',
+                    'detail_url' => route('public.reports.show', $r->id),
+                ];
+            });
+
+            $facilities = Facility::all()->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'name' => $f->name,
+                    'type' => $f->type,
+                    'latitude' => (float) $f->latitude,
+                    'longitude' => (float) $f->longitude,
+                ];
+            });
+
             return [
-                'id' => $r->id,
-                'ticket_number' => $r->ticket_number,
-                'title' => $r->title,
-                'road_name' => $r->road_name,
-                'kecamatan' => $r->kecamatan,
-                'desa' => $r->desa,
-                'status' => $r->status,
-                'damage_type' => $r->damage_type_label,
-                'disturbance_level' => ucfirst($r->disturbance_level),
-                'progress' => $r->current_progress,
-                'priority_level' => $r->priorityResult?->priority_level ?? 'Normal',
-                'marker_color' => $r->marker_color,
-                'latitude' => (float) $r->location->latitude,
-                'longitude' => (float) $r->location->longitude,
-                'photo_url' => $firstPhoto,
-                'opd_name' => $r->opd?->name ?? 'Belum Ditugaskan',
-                'detail_url' => route('public.reports.show', $r->id),
+                'reports' => $reports,
+                'facilities' => $facilities,
             ];
         });
 
-        $facilities = Facility::all()->map(function ($f) {
-            return [
-                'id' => $f->id,
-                'name' => $f->name,
-                'type' => $f->type,
-                'latitude' => (float) $f->latitude,
-                'longitude' => (float) $f->longitude,
-            ];
-        });
-
-        return response()->json([
-            'reports' => $reports,
-            'facilities' => $facilities,
-        ]);
+        return response()->json($response);
     }
 }
 
