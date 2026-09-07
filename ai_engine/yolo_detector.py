@@ -12,12 +12,21 @@ import io
 import json
 import os
 import sys
+import tempfile
 from typing import Any, Dict, List
 
+# Ensure writable temp directories for container environments (Render, Docker, www-data)
+_safe_tmp = tempfile.gettempdir()
+os.environ.setdefault("YOLO_CONFIG_DIR", _safe_tmp)
+os.environ.setdefault("TORCH_HOME", _safe_tmp)
+os.environ["YOLO_VERBOSE"] = "False"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
 
-def analyze_image(image_path: str, confidence_threshold: float = 0.05, imgsz: int = 512) -> Dict[str, Any]:
+
+def analyze_image(image_path: str, confidence_threshold: float = 0.05, imgsz: int = 384) -> Dict[str, Any]:
     """Analyze road damage strictly using the user's custom trained Kaggle YOLO model (model_terbaru_kaggle.pt)."""
-    import tempfile
     import urllib.request
 
     is_url = image_path.startswith("http://") or image_path.startswith("https://")
@@ -66,14 +75,8 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.05, imgsz: in
     }
 
     try:
-        # Suppress ultralytics banner and allocate 2 threads for fast inference
-        os.environ["YOLO_VERBOSE"] = "False"
-        os.environ["OMP_NUM_THREADS"] = "2"
-        os.environ["OPENBLAS_NUM_THREADS"] = "2"
-        os.environ["MKL_NUM_THREADS"] = "2"
-
         import torch
-        torch.set_num_threads(2)
+        torch.set_num_threads(1)
         torch.set_grad_enabled(False)
 
         from ultralytics import YOLO
@@ -178,7 +181,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="YOLO Road Damage Detector")
     parser.add_argument("--image", type=str, required=True, help="Path to image file or URL")
     parser.add_argument("--conf", type=float, default=0.05, help="Confidence threshold")
-    parser.add_argument("--imgsz", type=int, default=512, help="Inference image size")
+    parser.add_argument("--imgsz", type=int, default=384, help="Inference image size")
 
     args = parser.parse_args()
     output = analyze_image(args.image, args.conf, args.imgsz)

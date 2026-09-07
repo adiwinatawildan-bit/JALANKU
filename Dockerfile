@@ -23,8 +23,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Configure Apache
+# Configure Apache & Environment
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+ENV YOLO_CONFIG_DIR=/tmp
+ENV TORCH_HOME=/tmp
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
     && a2enmod rewrite

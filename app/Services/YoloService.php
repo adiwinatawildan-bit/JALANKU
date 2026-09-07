@@ -259,7 +259,8 @@ class YoloService
                 }
             }
 
-            // Execute custom YOLO detector with generous timeout (90s) and optimized memory footprint (512px)
+            // Execute custom YOLO detector with generous timeout (90s) and optimized low-memory footprint (384px)
+            $processFailureReason = null;
             if ($imageTarget && file_exists($this->scriptPath)) {
                 try {
                     $process = Process::timeout(90)->run([
@@ -270,7 +271,7 @@ class YoloService
                         '--conf',
                         '0.05',
                         '--imgsz',
-                        '512',
+                        '384',
                     ]);
                     $rawOutput = $process->output();
                     if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
@@ -278,18 +279,23 @@ class YoloService
                     } elseif ($process->failed()) {
                         $errOut = trim($process->errorOutput());
                         Log::error("YoloService execution failed (exit code {$process->exitCode()}): {$errOut}");
+                        $processFailureReason = $errOut ?: "Proses terhenti oleh sistem hosting (Exit code: {$process->exitCode()})";
                     }
                 } catch (\Throwable $e) {
                     Log::warning('YoloService execution timeout/notice: ' . $e->getMessage());
+                    $processFailureReason = 'Timeout: ' . $e->getMessage();
                 }
             }
         }
 
         // 4. If YOLO engine failed completely, do NOT fabricate 0-defect detection!
         if (!$outputJson || empty($outputJson['success'])) {
+            $reason = !empty($outputJson['error']) 
+                ? $outputJson['error'] 
+                : ($processFailureReason ?? 'keterbatasan memori RAM / timeout pada server hosting');
             return [
                 'success' => false,
-                'message' => 'YOLO engine belum berhasil menganalisis foto: ' . ($outputJson['error'] ?? 'keterbatasan memori/timeout pada server hosting'),
+                'message' => 'YOLO engine belum berhasil menganalisis foto: ' . $reason,
             ];
         }
 

@@ -6,6 +6,10 @@ PORT=${PORT:-80}
 sed -i "s/80/$PORT/g" /etc/apache2/ports.conf
 sed -i "s/:80/:$PORT/g" /etc/apache2/sites-available/*.conf
 
+# Set writable directories for AI / YOLO
+export YOLO_CONFIG_DIR=/tmp
+export TORCH_HOME=/tmp
+
 # Laravel Setup
 php artisan storage:link || true
 php artisan config:cache || true
