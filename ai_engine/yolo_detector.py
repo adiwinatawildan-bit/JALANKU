@@ -15,7 +15,7 @@ import sys
 from typing import Any, Dict, List
 
 
-def analyze_image(image_path: str, confidence_threshold: float = 0.05) -> Dict[str, Any]:
+def analyze_image(image_path: str, confidence_threshold: float = 0.05, imgsz: int = 512) -> Dict[str, Any]:
     """Analyze road damage strictly using the user's custom trained Kaggle YOLO model (model_terbaru_kaggle.pt)."""
     import tempfile
     import urllib.request
@@ -91,8 +91,8 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.05) -> Dict[s
 
         model = YOLO(model_path)
         
-        # Predict with custom trained weights (CPU, max 10 detections, imgsz 640)
-        detections = model.predict(target_image_path, conf=confidence_threshold, verbose=False, imgsz=640, max_det=10)
+        # Predict with custom trained weights (CPU, max 10 detections, imgsz)
+        detections = model.predict(target_image_path, conf=confidence_threshold, verbose=False, imgsz=imgsz, max_det=10, device='cpu')
 
         potholes = 0
         cracks = 0
@@ -178,7 +178,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="YOLO Road Damage Detector")
     parser.add_argument("--image", type=str, required=True, help="Path to image file or URL")
     parser.add_argument("--conf", type=float, default=0.05, help="Confidence threshold")
+    parser.add_argument("--imgsz", type=int, default=512, help="Inference image size")
 
     args = parser.parse_args()
-    output = analyze_image(args.image, args.conf)
+    output = analyze_image(args.image, args.conf, args.imgsz)
     print(json.dumps(output, indent=2))

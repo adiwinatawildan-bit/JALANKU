@@ -33,13 +33,6 @@
                 </button>
             @endif
 
-            <!-- Mark Duplicate Modal Trigger -->
-            @if($report->status !== \App\Models\Report::STATUS_DUPLIKAT)
-                <button type="button" onclick="openModal('modal-duplicate')" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center space-x-1.5">
-                    <i class="fa-solid fa-copy"></i>
-                    <span>Tandai Duplikat</span>
-                </button>
-            @endif
 
             <!-- Run YOLO AI Analysis -->
             <form method="POST" action="{{ route('admin.reports.yolo', $report->id) }}">
@@ -469,28 +462,6 @@
     </div>
 </div>
 
-<!-- MODAL TANDAI DUPLIKAT -->
-<div id="modal-duplicate" class="fixed inset-0 bg-navy-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
-        <h3 class="text-base font-bold text-navy-900 border-b border-slate-100 pb-3">Tandai Sebagai Laporan Duplikat</h3>
-        <form method="POST" action="{{ route('admin.reports.duplicate', $report->id) }}" class="space-y-4">
-            @csrf
-            <div class="space-y-1">
-                <label class="block text-xs font-bold text-slate-700">Pilih Laporan Utama</label>
-                <select name="duplicate_of_id" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
-                    <option value="">-- Pilih Laporan Utama --</option>
-                    @foreach($otherReports as $other)
-                        <option value="{{ $other->id }}">#{{ $other->ticket_number }} - {{ $other->road_name }} ({{ $other->kecamatan }})</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeModal('modal-duplicate')" class="px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl">Batal</button>
-                <button type="submit" class="px-4 py-2 bg-purple-600 text-white font-bold text-xs rounded-xl shadow">Tandai Duplikat</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 @endsection
 

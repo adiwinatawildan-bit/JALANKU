@@ -58,6 +58,7 @@ class YoloService
         $confidenceSum = 0;
         $totalArea = 0.0;
 
+        $lastError = null;
         foreach ($photos as $photo) {
             $result = $this->analyzePhoto($photo, $report);
             if (!empty($result['success']) && isset($result['detection'])) {
@@ -68,6 +69,8 @@ class YoloService
                 $totalDefects += $result['detection']->total_defects;
                 $confidenceSum += $result['detection']->confidence_score;
                 $totalArea += $result['detection']->damaged_area_sqm ?? 0.0;
+            } else {
+                $lastError = $result['message'] ?? null;
             }
         }
 
@@ -75,7 +78,7 @@ class YoloService
         if ($count === 0) {
             return [
                 'success' => false,
-                'message' => 'Model YOLO belum berhasil mendeteksi foto atau sedang diproses. Laporan tetap dalam status Menunggu Analisis AI.',
+                'message' => $lastError ?: 'Model YOLO belum berhasil mendeteksi foto atau sedang diproses. Laporan tetap dalam status Menunggu Analisis AI.',
             ];
         }
 
@@ -256,20 +259,25 @@ class YoloService
                 }
             }
 
-            // Execute custom YOLO detector with generous timeout (60s)
+            // Execute custom YOLO detector with generous timeout (90s) and optimized memory footprint (512px)
             if ($imageTarget && file_exists($this->scriptPath)) {
                 try {
-                    $process = Process::timeout(60)->run([
+                    $process = Process::timeout(90)->run([
                         $this->pythonPath,
                         $this->scriptPath,
                         '--image',
                         (string) $imageTarget,
                         '--conf',
-                        '0.05'
+                        '0.05',
+                        '--imgsz',
+                        '512',
                     ]);
                     $rawOutput = $process->output();
                     if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
                         $outputJson = json_decode($matches[0], true);
+                    } elseif ($process->failed()) {
+                        $errOut = trim($process->errorOutput());
+                        Log::error("YoloService execution failed (exit code {$process->exitCode()}): {$errOut}");
                     }
                 } catch (\Throwable $e) {
                     Log::warning('YoloService execution timeout/notice: ' . $e->getMessage());
@@ -281,7 +289,7 @@ class YoloService
         if (!$outputJson || empty($outputJson['success'])) {
             return [
                 'success' => false,
-                'message' => 'YOLO engine belum berhasil menganalisis foto: ' . ($outputJson['error'] ?? 'timeout atau respon kosong'),
+                'message' => 'YOLO engine belum berhasil menganalisis foto: ' . ($outputJson['error'] ?? 'keterbatasan memori/timeout pada server hosting'),
             ];
         }
 

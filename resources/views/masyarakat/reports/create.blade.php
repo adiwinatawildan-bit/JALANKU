@@ -255,20 +255,59 @@
                 .then(data => {
                     if (data && data.address) {
                         var addr = data.address;
-                        var road = addr.road || addr.street || addr.residential || addr.path || addr.pedestrian || '';
-                        var district = addr.suburb || addr.municipality || addr.city_district || addr.county || addr.district || '';
-                        var village = addr.village || addr.neighbourhood || addr.quarter || addr.hamlet || addr.town || '';
                         var fullAddress = data.display_name || '';
+
+                        // Hirarki Alamat Indonesia di OpenStreetMap:
+                        // 1. Wilayah Kecamatan: city_district / county / municipality / district
+                        // 2. Wilayah Desa/Kelurahan: village / suburb / neighbourhood / quarter / hamlet
+                        var rawDistrict = addr.city_district || addr.county || addr.municipality || addr.district || '';
+                        var rawVillage = addr.village || addr.quarter || addr.hamlet || '';
+                        var rawSuburb = addr.suburb || addr.neighbourhood || '';
+
+                        var district = '';
+                        var village = '';
+
+                        if (rawDistrict && rawSuburb) {
+                            // Contoh: Sukagalih (suburb) di Tarogong Kidul (city_district)
+                            district = rawDistrict;
+                            village = rawVillage || rawSuburb;
+                        } else if (rawDistrict && rawVillage) {
+                            district = rawDistrict;
+                            village = rawVillage;
+                        } else if (!rawDistrict && rawSuburb && rawVillage) {
+                            // Contoh: Garut Kota (suburb) dengan Pakuwon (village)
+                            district = rawSuburb;
+                            village = rawVillage;
+                        } else if (rawDistrict) {
+                            district = rawDistrict;
+                            village = rawVillage || rawSuburb;
+                        } else if (rawSuburb) {
+                            district = rawSuburb;
+                            village = rawVillage;
+                        } else if (rawVillage) {
+                            village = rawVillage;
+                        }
+
+                        var cleanDistrict = district.replace(/^(Kecamatan|Distrik)\s+/i, '').trim();
+                        var cleanVillage = village.replace(/^(Desa|Kelurahan)\s+/i, '').trim();
+
+                        // 3. Nama Ruas Jalan:
+                        var road = addr.road || addr.street || addr.residential || addr.highway || addr.pedestrian || addr.path || addr.amenity || addr.building || data.name || '';
+                        
+                        // Jika jalan belum memiliki tag nama spesifik di OSM, otomatis gunakan nama desa/kelurahan agar tidak kosong
+                        if (!road && cleanVillage) {
+                            road = 'Jalan ' + cleanVillage;
+                        } else if (!road && cleanDistrict) {
+                            road = 'Jalan ' + cleanDistrict;
+                        }
 
                         if (road) {
                             document.getElementById('road_name').value = road;
                         }
-                        if (district) {
-                            var cleanDistrict = district.replace(/^Kecamatan\s+/i, '');
+                        if (cleanDistrict) {
                             document.getElementById('kecamatan').value = 'Kecamatan ' + cleanDistrict;
                         }
-                        if (village) {
-                            var cleanVillage = village.replace(/^(Desa|Kelurahan)\s+/i, '');
+                        if (cleanVillage) {
                             document.getElementById('desa').value = cleanVillage;
                         }
                         if (fullAddress) {
@@ -276,7 +315,7 @@
                         }
 
                         if (statusEl) {
-                            statusEl.innerHTML = '<span class="text-emerald-600 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Alamat berhasil diisi otomatis sesuai titik GPS!</span>';
+                            statusEl.innerHTML = '<span class="text-emerald-600 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Alamat & wilayah berhasil diisi otomatis sesuai titik GPS!</span>';
                         }
                     } else {
                         if (statusEl) {
