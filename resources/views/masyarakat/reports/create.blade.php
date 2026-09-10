@@ -244,10 +244,10 @@
                         var addr = data.address;
                         var fullAddress = data.display_name || '';
 
-                        // Hirarki Alamat Indonesia di OpenStreetMap:
-                        // 1. Wilayah Kecamatan: city_district / county / municipality / district
+                        // Hirarki Wilayah Indonesia di OpenStreetMap:
+                        // 1. Wilayah Kecamatan: subdistrict / city_district / district / municipality
                         // 2. Wilayah Desa/Kelurahan: village / suburb / neighbourhood / quarter / hamlet
-                        var rawDistrict = addr.city_district || addr.county || addr.municipality || addr.district || '';
+                        var rawDistrict = addr.subdistrict || addr.city_district || addr.district || addr.municipality || '';
                         var rawVillage = addr.village || addr.quarter || addr.hamlet || '';
                         var rawSuburb = addr.suburb || addr.neighbourhood || '';
 
@@ -261,18 +261,35 @@
                         } else if (rawDistrict && rawVillage) {
                             district = rawDistrict;
                             village = rawVillage;
+                        } else if (rawDistrict) {
+                            district = rawDistrict;
+                            village = rawVillage || rawSuburb || rawDistrict;
                         } else if (!rawDistrict && rawSuburb && rawVillage) {
                             // Contoh: Garut Kota (suburb) dengan Pakuwon (village)
                             district = rawSuburb;
                             village = rawVillage;
-                        } else if (rawDistrict) {
-                            district = rawDistrict;
-                            village = rawVillage || rawSuburb;
                         } else if (rawSuburb) {
                             district = rawSuburb;
-                            village = rawVillage;
+                            village = rawSuburb;
                         } else if (rawVillage) {
+                            district = rawVillage;
                             village = rawVillage;
+                        }
+
+                        // Jaminan saling mengisi: jika salah satu ada, keduanya terisi (misal: Desa Cisewu, Kec. Cisewu)
+                        if (district && !village) {
+                            village = district;
+                        } else if (village && !district) {
+                            district = village;
+                        }
+
+                        // Fallback cadangan dari token display_name jika masih kosong
+                        if (!district && fullAddress) {
+                            var parts = fullAddress.split(',').map(function(s) { return s.trim(); });
+                            if (parts.length >= 3) {
+                                district = parts[0];
+                                village = parts[0];
+                            }
                         }
 
                         var cleanDistrict = district.replace(/^(Kecamatan|Distrik)\s+/i, '').trim();
