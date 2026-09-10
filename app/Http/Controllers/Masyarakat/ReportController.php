@@ -106,10 +106,11 @@ class ReportController extends Controller
             'damage_type' => ['nullable', 'string'],
             'disturbance_level' => ['nullable', 'string'],
             'additional_info' => ['nullable', 'string'],
-            'photos' => ['required', 'array', 'min:1', 'max:3'],
+            'photos' => ['required', 'array', 'size:1'],
             'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ], [
-            'photos.max' => 'Maksimal 3 foto untuk setiap laporan.',
+            'photos.required' => 'Wajib melampirkan 1 foto dokumentasi kerusakan jalan.',
+            'photos.size' => 'Hanya diperbolehkan mengirim 1 foto untuk setiap laporan.',
             'photos.*.max' => 'Ukuran foto tidak boleh melebihi 5 MB.',
             'photos.*.mimes' => 'Format foto harus berupa JPG, JPEG, PNG, atau WEBP.',
         ]);
@@ -223,11 +224,11 @@ class ReportController extends Controller
             return $report;
         });
 
-        // 2. Upload up to 3 Photos to Supabase/Local Storage safely
+        // 2. Upload 1 Photo to Supabase/Local Storage safely
         if ($request->hasFile('photos')) {
             $files = $request->file('photos');
             $index = 1;
-            foreach (array_slice($files, 0, 3) as $file) {
+            foreach (array_slice($files, 0, 1) as $file) {
                 try {
                     $stored = $this->storageService->uploadInitialPhoto($file, $report->id, $index);
                     ReportPhoto::create([

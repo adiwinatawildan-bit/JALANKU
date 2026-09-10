@@ -147,19 +147,19 @@
                 <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start space-x-2.5">
                     <i class="fa-solid fa-triangle-exclamation text-amber-600 text-base mt-0.5"></i>
                     <div>
-                        <strong class="font-bold">Ketentuan Foto:</strong> Maksimal 3 foto untuk setiap laporan. Format yang diperbolehkan: JPG, JPEG, PNG, WEBP (Maksimal 5 MB per foto). Foto ke-4 akan ditolak otomatis.
+                        <strong class="font-bold">Ketentuan Foto:</strong> Wajib melampirkan 1 foto dokumentasi kerusakan jalan. Format yang diperbolehkan: JPG, JPEG, PNG, WEBP (Maksimal 5 MB).
                     </div>
                 </div>
 
                 <!-- Dropzone / Input File -->
                 <div class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-amber-500 transition cursor-pointer bg-slate-50" id="drop-area">
-                    <input type="file" id="photo-input" name="photos[]" multiple accept="image/jpeg,image/png,image/webp,image/jpg" class="hidden">
+                    <input type="file" id="photo-input" name="photos[]" accept="image/jpeg,image/png,image/webp,image/jpg" class="hidden">
                     <div class="space-y-2 pointer-events-none">
                         <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-xl">
                             <i class="fa-solid fa-cloud-arrow-up"></i>
                         </div>
-                        <p class="text-xs font-bold text-slate-700">Klik atau seret foto ke area ini untuk mengunggah</p>
-                        <p class="text-[11px] text-slate-400">Pilih 1 sampai 3 foto dokumentasi kerusakan jalan</p>
+                        <p class="text-xs font-bold text-slate-700">Klik atau seret 1 foto ke area ini untuk mengunggah</p>
+                        <p class="text-[11px] text-slate-400">Lampirkan 1 foto dokumentasi kerusakan jalan yang jelas</p>
                     </div>
                 </div>
                 @error('photos')
@@ -168,31 +168,18 @@
                 @error('photos.*')
                     <p class="text-xs text-rose-600 font-bold mt-1">{{ $message }}</p>
                 @enderror
-                <p class="text-xs text-rose-600 font-bold mt-1 hidden field-error" id="error-photos">⚠️ Silakan lampirkan minimal 1 foto dokumentasi kerusakan jalan.</p>
+                <p class="text-xs text-rose-600 font-bold mt-1 hidden field-error" id="error-photos">⚠️ Silakan lampirkan 1 foto dokumentasi kerusakan jalan.</p>
 
-                <!-- 40. PREVIEW FOTO KOTAK 1, 2, 3 -->
+                <!-- 40. PREVIEW FOTO (1 FOTO) -->
                 <div>
                     <p class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Preview Foto Sebelum Dikirim:</p>
-                    <div class="grid grid-cols-3 gap-4" id="preview-container">
+                    <div class="max-w-xs" id="preview-container">
                         <!-- Box 1 -->
-                        <div id="box-1" class="h-36 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-center p-2 relative overflow-hidden">
-                            <span class="text-xs font-bold text-slate-400 uppercase">FOTO 1</span>
-                            <span class="text-[10px] text-slate-400">Kosong</span>
-                        </div>
-                        <!-- Box 2 -->
-                        <div id="box-2" class="h-36 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-center p-2 relative overflow-hidden">
-                            <span class="text-xs font-bold text-slate-400 uppercase">FOTO 2</span>
-                            <span class="text-[10px] text-slate-400">Kosong</span>
-                        </div>
-                        <!-- Box 3 -->
-                        <div id="box-3" class="h-36 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-center p-2 relative overflow-hidden">
-                            <span class="text-xs font-bold text-slate-400 uppercase">FOTO 3</span>
-                            <span class="text-[10px] text-slate-400">Kosong</span>
+                        <div id="box-1" class="h-44 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-center p-2 relative overflow-hidden">
+                            <span class="text-xs font-bold text-slate-400 uppercase">FOTO KERUSAKAN JALAN</span>
+                            <span class="text-[10px] text-slate-400">Belum ada foto dipilih</span>
                         </div>
                     </div>
-                    <p id="photo-limit-warning" class="text-xs font-bold text-rose-600 mt-2 hidden">
-                        ⚠️ Batas maksimal foto telah tercapai (Maksimal 3 foto).
-                    </p>
                 </div>
             </div>
 
@@ -381,7 +368,7 @@
             }
         });
 
-        // 16 & 40. PHOTO UPLOAD PREVIEW & 3-PHOTO LIMIT LOGIC
+        // 16 & 40. PHOTO UPLOAD PREVIEW & 1-PHOTO LIMIT LOGIC
         var dropArea = document.getElementById('drop-area');
         var photoInput = document.getElementById('photo-input');
         var selectedFiles = [];
@@ -395,66 +382,49 @@
         });
 
         function handleFiles(files) {
-            var warning = document.getElementById('photo-limit-warning');
-            
-            for (var i = 0; i < files.length; i++) {
-                if (selectedFiles.length >= 3) {
-                    warning.classList.remove('hidden');
-                    break;
-                }
-                var file = files[i];
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File ' + file.name + ' melebihi ukuran maksimal 5 MB!');
-                    continue;
-                }
-                selectedFiles.push(file);
+            if (!files || files.length === 0) return;
+            var file = files[0];
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File ' + file.name + ' melebihi ukuran maksimal 5 MB!');
+                return;
             }
-
-            if (selectedFiles.length >= 3) {
-                warning.classList.remove('hidden');
-            } else {
-                warning.classList.add('hidden');
-            }
-
+            selectedFiles = [file];
             updatePreviews();
             syncDataTransfer();
         }
 
         function updatePreviews() {
-            for (var i = 1; i <= 3; i++) {
-                var box = document.getElementById('box-' + i);
-                var file = selectedFiles[i - 1];
+            var box = document.getElementById('box-1');
+            if (!box) return;
+            var file = selectedFiles[0];
 
-                if (file) {
-                    var reader = new FileReader();
-                    (function(targetBox, index) {
-                        reader.onload = function(e) {
-                            targetBox.innerHTML = `
-                                <img src="${e.target.result}" class="w-full h-full object-cover">
-                                <button type="button" onclick="removePhoto(${index})" class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 text-white text-xs flex items-center justify-center shadow-lg hover:bg-rose-700">
-                                    <i class="fa-solid fa-xmark"></i>
-                                </button>
-                                <span class="absolute bottom-1 left-1.5 text-[10px] font-bold text-white bg-navy-950/80 px-1.5 py-0.5 rounded">FOTO ${index + 1}</span>
-                            `;
-                            targetBox.classList.remove('border-dashed');
-                            targetBox.classList.add('border-solid', 'border-amber-500');
-                        };
-                    })(box, i - 1);
-                    reader.readAsDataURL(file);
-                } else {
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
                     box.innerHTML = `
-                        <span class="text-xs font-bold text-slate-400 uppercase">FOTO ${i}</span>
-                        <span class="text-[10px] text-slate-400">Kosong</span>
+                        <img src="${e.target.result}" class="w-full h-full object-cover">
+                        <button type="button" onclick="removePhoto(0)" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-rose-600 text-white text-xs flex items-center justify-center shadow-lg hover:bg-rose-700 transition">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <span class="absolute bottom-2 left-2 text-[10px] font-bold text-white bg-navy-950/80 px-2 py-0.5 rounded">FOTO TERPILIH</span>
                     `;
-                    box.classList.remove('border-solid', 'border-amber-500');
-                    box.classList.add('border-dashed', 'border-slate-300');
-                }
+                    box.classList.remove('border-dashed', 'border-slate-300');
+                    box.classList.add('border-solid', 'border-amber-500');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                box.innerHTML = `
+                    <span class="text-xs font-bold text-slate-400 uppercase">FOTO KERUSAKAN JALAN</span>
+                    <span class="text-[10px] text-slate-400">Belum ada foto dipilih</span>
+                `;
+                box.classList.remove('border-solid', 'border-amber-500');
+                box.classList.add('border-dashed', 'border-slate-300');
             }
         }
 
         window.removePhoto = function(index) {
-            selectedFiles.splice(index, 1);
-            document.getElementById('photo-limit-warning').classList.add('hidden');
+            selectedFiles = [];
+            photoInput.value = '';
             updatePreviews();
             syncDataTransfer();
         };
