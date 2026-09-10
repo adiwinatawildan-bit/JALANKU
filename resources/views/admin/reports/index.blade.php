@@ -108,7 +108,7 @@
                                         Tergabung ke #{{ $report->duplicateOf->ticket_number }}
                                     </span>
                                 @elseif($report->priorityResult)
-                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $report->priorityResult->badge_class }} border">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $report->priorityResult->badge_class }} border whitespace-nowrap">
                                         {{ $report->priorityResult->priority_level }} ({{ $report->priorityResult->score }})
                                     </span>
                                 @else
@@ -162,7 +162,7 @@
                                 (Duplikat dari #{{ $report->duplicateOf->ticket_number }})
                             </span>
                         @elseif($report->priorityResult)
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $report->priorityResult->badge_class }} border">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold {{ $report->priorityResult->badge_class }} border whitespace-nowrap">
                                 {{ $report->priorityResult->priority_level }}
                             </span>
                         @endif

@@ -57,33 +57,33 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs text-slate-700">
+            <table class="w-full text-left text-xs text-slate-700 min-w-[640px]">
                 <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
                     <tr>
-                        <th class="py-3.5 px-4">Nama Ruas Jalan</th>
-                        <th class="py-3.5 px-4">Prioritas</th>
-                        <th class="py-3.5 px-4">Progres Pengerjaan</th>
-                        <th class="py-3.5 px-4">Status Terkini</th>
-                        <th class="py-3.5 px-4 text-right">Tombol Tindakan</th>
+                        <th class="py-3.5 px-4 whitespace-nowrap">Nama Ruas Jalan</th>
+                        <th class="py-3.5 px-4 whitespace-nowrap">Prioritas</th>
+                        <th class="py-3.5 px-4 whitespace-nowrap">Progres Pengerjaan</th>
+                        <th class="py-3.5 px-4 whitespace-nowrap">Status Terkini</th>
+                        <th class="py-3.5 px-4 text-right whitespace-nowrap">Tombol Tindakan</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 font-medium">
                     @forelse($tasks as $task)
                         <tr class="hover:bg-slate-50/80 transition">
-                            <td class="py-4 px-4">
+                            <td class="py-4 px-4 whitespace-nowrap">
                                 <span class="font-bold text-navy-900 block text-sm">{{ $task->road_name }}</span>
                                 <span class="text-[11px] text-slate-400 font-mono">#{{ $task->ticket_number }} • {{ $task->kecamatan }}</span>
                             </td>
-                            <td class="py-4 px-4">
+                            <td class="py-4 px-4 whitespace-nowrap">
                                 @if($task->priorityResult)
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold {{ $task->priorityResult->badge_class }} border">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold {{ $task->priorityResult->badge_class }} border whitespace-nowrap">
                                         {{ $task->priorityResult->priority_level }}
                                     </span>
                                 @else
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold text-[10px]">Normal</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold text-[10px] whitespace-nowrap">Normal</span>
                                 @endif
                             </td>
-                            <td class="py-4 px-4">
+                            <td class="py-4 px-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-2">
                                     <div class="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
                                         <div class="h-full bg-emerald-500 rounded-full" style="width: {{ $task->current_progress }}%"></div>
@@ -91,13 +91,13 @@
                                     <span class="font-bold text-[11px]">{{ $task->current_progress }}%</span>
                                 </div>
                             </td>
-                            <td class="py-4 px-4">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold {{ $task->status_badge_class }} border">
+                            <td class="py-4 px-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold {{ $task->status_badge_class }} border whitespace-nowrap">
                                     {{ $task->status }}
                                 </span>
                             </td>
-                            <td class="py-4 px-4 text-right space-x-2">
-                                <a href="{{ route('opd.tasks.show', $task->id) }}" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-navy-950 font-bold text-xs rounded-xl shadow transition inline-flex items-center space-x-1.5">
+                            <td class="py-4 px-4 text-right space-x-2 whitespace-nowrap">
+                                <a href="{{ route('opd.tasks.show', $task->id) }}" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-navy-950 font-bold text-xs rounded-xl shadow transition inline-flex items-center space-x-1.5 whitespace-nowrap">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                     <span>Update Progress</span>
                                 </a>
