@@ -13,8 +13,8 @@ class PublicController extends Controller
 {
     public function index()
     {
-        $data = Cache::remember('public_landing_data', 45, function () {
-            // 1. STATISTIK LANDING PAGE (Single aggregated query instead of 4 separate queries)
+        // 1. STATISTIK LANDING PAGE (Cached aggregated query)
+        $stats = Cache::remember('public_landing_stats', 60, function () {
             $statsRow = DB::selectOne("
                 SELECT 
                     COUNT(*) as total,
@@ -23,48 +23,46 @@ class PublicController extends Controller
                     COUNT(CASE WHEN status = '" . Report::STATUS_SELESAI . "' THEN 1 END) as selesai
                 FROM reports
             ");
-            $stats = [
+            return [
                 'total_pengaduan' => (int) ($statsRow->total ?? 0),
                 'sedang_diproses' => (int) ($statsRow->sedang_diproses ?? 0),
                 'sedang_diperbaiki' => (int) ($statsRow->sedang_diperbaiki ?? 0),
                 'selesai' => (int) ($statsRow->selesai ?? 0),
             ];
-
-            // Recent reports for public feed
-            $recentReports = Report::with(['location', 'photos', 'progressUpdates.photos', 'priorityResult', 'opd'])
-                ->where('is_public', true)
-                ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
-                ->latest()
-                ->take(6)
-                ->get();
-
-            // Active repair reports showcase
-            $repairShowcase = Report::with(['location', 'photos', 'progressUpdates.photos', 'opd'])
-                ->whereIn('status', [Report::STATUS_SEDANG_DIPERBAIKI, Report::STATUS_SELESAI])
-                ->has('progressUpdates')
-                ->latest('updated_at')
-                ->take(3)
-                ->get();
-
-            // Reports for Live Feed interactive dropdown widget (Survei, Perbaikan, Selesai)
-            $liveFeedReports = Report::with(['location', 'photos', 'progressUpdates.photos', 'opd'])
-                ->where('is_public', true)
-                ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
-                ->orderByRaw("CASE 
-                    WHEN status = '" . Report::STATUS_SEDANG_DIPERBAIKI . "' THEN 1 
-                    WHEN status = '" . Report::STATUS_SURVEI . "' THEN 2 
-                    WHEN status = '" . Report::STATUS_DITUGASKAN . "' THEN 3 
-                    WHEN status = '" . Report::STATUS_MENUNGGU_PERBAIKAN . "' THEN 4 
-                    WHEN status = '" . Report::STATUS_SELESAI . "' THEN 5 
-                    ELSE 6 END")
-                ->latest('updated_at')
-                ->take(10)
-                ->get();
-
-            return compact('stats', 'recentReports', 'repairShowcase', 'liveFeedReports');
         });
 
-        return view('public.index', $data);
+        // Recent reports for public feed
+        $recentReports = Report::with(['location', 'photos', 'progressUpdates.photos', 'priorityResult', 'opd'])
+            ->where('is_public', true)
+            ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
+            ->latest()
+            ->take(6)
+            ->get();
+
+        // Active repair reports showcase
+        $repairShowcase = Report::with(['location', 'photos', 'progressUpdates.photos', 'opd'])
+            ->whereIn('status', [Report::STATUS_SEDANG_DIPERBAIKI, Report::STATUS_SELESAI])
+            ->has('progressUpdates')
+            ->latest('updated_at')
+            ->take(3)
+            ->get();
+
+        // Reports for Live Feed interactive dropdown widget (Survei, Perbaikan, Selesai)
+        $liveFeedReports = Report::with(['location', 'photos', 'progressUpdates.photos', 'opd'])
+            ->where('is_public', true)
+            ->whereNotIn('status', [Report::STATUS_DITOLAK, Report::STATUS_DUPLIKAT])
+            ->orderByRaw("CASE 
+                WHEN status = '" . Report::STATUS_SEDANG_DIPERBAIKI . "' THEN 1 
+                WHEN status = '" . Report::STATUS_SURVEI . "' THEN 2 
+                WHEN status = '" . Report::STATUS_DITUGASKAN . "' THEN 3 
+                WHEN status = '" . Report::STATUS_MENUNGGU_PERBAIKAN . "' THEN 4 
+                WHEN status = '" . Report::STATUS_SELESAI . "' THEN 5 
+                ELSE 6 END")
+            ->latest('updated_at')
+            ->take(10)
+            ->get();
+
+        return view('public.index', compact('stats', 'recentReports', 'repairShowcase', 'liveFeedReports'));
     }
 
     public function peta(Request $request)
