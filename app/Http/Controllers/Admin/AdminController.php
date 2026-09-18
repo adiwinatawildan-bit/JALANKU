@@ -53,17 +53,16 @@ class AdminController extends Controller
                 ->count(),
         ];
 
-        // Perlu Tindakan
+        // Perlu Tindakan & Monitoring Penugasan
         $actionRequired = [
             'belum_diverifikasi' => Report::with(['location', 'photos'])
                 ->where('status', Report::STATUS_DIAJUKAN)
                 ->latest()
                 ->take(5)
                 ->get(),
-            'belum_ditugaskan' => Report::with(['location', 'priorityResult'])
-                ->where('status', Report::STATUS_DIVERIFIKASI)
-                ->whereNull('opd_id')
-                ->latest()
+            'ditugaskan' => Report::with(['location', 'priorityResult', 'opd'])
+                ->where('status', Report::STATUS_DITUGASKAN)
+                ->latest('assigned_at')
                 ->take(5)
                 ->get(),
             'terlambat' => Report::with(['location', 'opd'])

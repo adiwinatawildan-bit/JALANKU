@@ -89,36 +89,37 @@
             @endif
         </div>
 
-        <!-- Action 2: Belum Ditugaskan -->
+        <!-- Action 2: Ditugaskan ke OPD -->
         <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="text-sm font-bold text-navy-900 flex items-center">
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2"></span>
-                    Belum Ditugaskan ke OPD ({{ $stats['diverifikasi'] }})
+                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-2"></span>
+                    Ditugaskan ke OPD ({{ $stats['ditugaskan'] }})
                 </h3>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Tugaskan</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">Tugas Lapangan</span>
             </div>
 
             <div class="space-y-3">
-                @forelse($actionRequired['belum_ditugaskan'] as $rep)
+                @forelse($actionRequired['ditugaskan'] as $rep)
                     <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between text-xs hover:bg-slate-100 transition">
                         <div>
                             <span class="font-mono font-bold text-amber-600">{{ $rep->ticket_number }}</span>
                             <h4 class="font-bold text-navy-900 truncate max-w-[170px]">{{ $rep->road_name }}</h4>
+                            <span class="text-[10px] text-slate-500 block">{{ $rep->opd?->name ?? 'OPD Belum Ada' }}</span>
                         </div>
-                        <a href="{{ route('admin.reports.show', $rep->id) }}" class="px-3 py-1 bg-amber-500 text-navy-950 font-bold text-[10px] rounded-lg">
-                            Tugaskan &rarr;
+                        <a href="{{ route('admin.reports.show', $rep->id) }}" class="px-3 py-1 bg-amber-500 text-navy-950 font-bold text-[10px] rounded-lg shadow-sm hover:bg-amber-600 transition">
+                            Pantau &rarr;
                         </a>
                     </div>
                 @empty
-                    <p class="text-xs text-slate-400 text-center py-4">Tidak ada laporan antrean penugasan.</p>
+                    <p class="text-xs text-slate-400 text-center py-4">Belum ada laporan yang ditugaskan ke OPD.</p>
                 @endforelse
             </div>
 
-            @if($stats['diverifikasi'] > 5)
+            @if($stats['ditugaskan'] > 5)
                 <div class="pt-2 text-center border-t border-slate-100">
-                    <a href="{{ route('admin.reports.index', ['status' => 'DIVERIFIKASI']) }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700">
-                        Lihat Semua ({{ $stats['diverifikasi'] }}) &rarr;
+                    <a href="{{ route('admin.reports.index', ['status' => 'DITUGASKAN']) }}" class="text-[11px] font-bold text-amber-600 hover:text-amber-700">
+                        Lihat Semua ({{ $stats['ditugaskan'] }}) &rarr;
                     </a>
                 </div>
             @endif
