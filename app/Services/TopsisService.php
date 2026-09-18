@@ -20,6 +20,14 @@ class TopsisService
     {
         $criteria = PriorityCriterion::where('is_active', true)->orderBy('code')->get();
         if ($criteria->isEmpty()) {
+            try {
+                (new \Database\Seeders\PriorityCriteriaSeeder())->run();
+                $criteria = PriorityCriterion::where('is_active', true)->orderBy('code')->get();
+            } catch (\Throwable $e) {
+                // Ignore seeder errors if any
+            }
+        }
+        if ($criteria->isEmpty()) {
             return collect();
         }
 
@@ -202,7 +210,7 @@ class TopsisService
      */
     public function ensureAssessmentExists(Report $report): RoadAssessment
     {
-        $hours = max(1, (int) $report->created_at->diffInHours(now()));
+        $hours = max(1, (int) ($report->created_at ? $report->created_at->diffInHours(now()) : 24));
         $pendingDays = max(1.0, round($hours / 24.0, 1));
 
         // Count community reports on the same road (Crowdsourcing / C3) with fuzzy road matching for minor typos
@@ -288,30 +296,34 @@ class TopsisService
         $c3ReportCount = (float) min(10.0, max($sameRoadCount, 1 + $clusterDuplicatesCount));
         $c4PendingDays = (float) $pendingDays;
 
-        if ($report->assessment) {
-            if (!$report->assessment->evaluated_by) {
-                $report->assessment->update([
+        $assessment = $report->assessment ?: RoadAssessment::where('report_id', $report->id)->first();
+
+        if ($assessment) {
+            if (!$assessment->evaluated_by) {
+                $assessment->update([
                     'c1_damage_scale' => $c1Scale,
                     'c2_user_safety' => $c2Safety,
-                    'c4_report_count' => $c3ReportCount,
+                    'c4_report_count' => (int) $c3ReportCount,
                     'c7_community_impact' => $c7Impact,
-                    'c8_pending_days' => $c4PendingDays,
+                    'c8_pending_days' => (int) $c4PendingDays,
                 ]);
             }
-            return $report->assessment;
+            return $assessment;
         }
 
-        return RoadAssessment::create([
-            'report_id' => $report->id,
-            'c1_damage_scale' => $c1Scale,
-            'c2_user_safety' => $c2Safety,
-            'c3_traffic_volume' => 3.5,
-            'c4_report_count' => $c3ReportCount,
-            'c5_road_function' => 3.0,
-            'c6_facility_proximity' => 3.0,
-            'c7_community_impact' => $c7Impact,
-            'c8_pending_days' => $c4PendingDays,
-        ]);
+        return RoadAssessment::updateOrCreate(
+            ['report_id' => $report->id],
+            [
+                'c1_damage_scale' => $c1Scale,
+                'c2_user_safety' => $c2Safety,
+                'c3_traffic_volume' => 3.5,
+                'c4_report_count' => (int) $c3ReportCount,
+                'c5_road_function' => 3.0,
+                'c6_facility_proximity' => 3.0,
+                'c7_community_impact' => $c7Impact,
+                'c8_pending_days' => (int) $c4PendingDays,
+            ]
+        );
     }
 
     /**

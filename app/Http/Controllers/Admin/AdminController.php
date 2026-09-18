@@ -486,8 +486,13 @@ class AdminController extends Controller
 
     public function recalculateTopsis()
     {
-        $results = $this->topsisService->calculateAll();
-        return back()->with('success', "Kalkulasi prioritas TOPSIS berhasil diperbarui untuk {$results->count()} laporan.");
+        try {
+            $results = $this->topsisService->calculateAll();
+            return back()->with('success', "Kalkulasi prioritas TOPSIS berhasil diperbarui untuk {$results->count()} laporan.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Recalculate TOPSIS error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return back()->with('error', 'Gagal memperbarui prioritas TOPSIS: ' . $e->getMessage());
+        }
     }
 
     public function deleteReport($id)
