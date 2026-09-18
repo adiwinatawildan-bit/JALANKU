@@ -285,9 +285,11 @@ class AdminController extends Controller
             'changed_by' => $admin->id,
         ]);
 
-        // Run YOLO detection & TOPSIS calculation safely
+        // Run YOLO detection & TOPSIS calculation safely (only analyze if not yet analyzed)
         try {
-            $this->yoloService->analyzeReport($report, $admin->id);
+            if ($report->damage_type === 'menunggu_analisis' || $report->detections()->doesntExist()) {
+                $this->yoloService->analyzeReport($report, $admin->id);
+            }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('YOLO analysis notice: ' . $e->getMessage());
         }

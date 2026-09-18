@@ -259,12 +259,12 @@ class YoloService
                 }
             }
 
-            // Execute custom YOLO detector with generous timeout (120s) and optimized low-memory footprint (384px)
+            // Execute custom YOLO detector with safe timeout (25s, well under Render's 100s proxy limit)
             $processFailureReason = null;
             if ($imageTarget && file_exists($this->scriptPath)) {
                 $optimizedImage = $this->optimizeImageForYolo((string) $imageTarget);
                 try {
-                    $process = Process::timeout(120)
+                    $process = Process::timeout(25)
                         ->env([
                             'YOLO_OFFLINE' => 'True',
                             'ULTRALYTICS_OFFLINE' => 'True',
