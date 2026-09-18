@@ -136,10 +136,10 @@
                             <div class="space-y-1">
                                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Progres (%) <span class="text-rose-500">*</span></label>
                                 <select name="progress_percentage" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
-                                    <option value="20" {{ old('progress_percentage') == '20' ? 'selected' : '' }}>20% - Pembersihan & Pondasi</option>
-                                    <option value="50" {{ old('progress_percentage') == '50' ? 'selected' : '' }}>50% - Sub-base / Drainase</option>
-                                    <option value="80" {{ old('progress_percentage') == '80' ? 'selected' : '' }}>80% - Lapisan Aspal / Hotmix</option>
-                                    <option value="100" {{ old('progress_percentage') == '100' ? 'selected' : '' }}>100% - Selesai & Marka Jalan</option>
+                                    <option value="" disabled {{ old('progress_percentage') ? '' : 'selected' }}>Pilih Progres (%)</option>
+                                    @for ($i = 10; $i <= 100; $i += 10)
+                                        <option value="{{ $i }}" {{ old('progress_percentage') == (string)$i ? 'selected' : '' }}>{{ $i }}%</option>
+                                    @endfor
                                 </select>
                             </div>
                         </div>
@@ -197,18 +197,44 @@
 
                 <div class="space-y-4">
                     @forelse($report->progressUpdates as $upd)
-                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
-                            <div class="flex justify-between items-center font-bold">
-                                <span class="text-navy-900">Minggu {{ $upd->week_number }} ({{ $upd->progress_percentage }}%)</span>
-                                <span class="text-slate-400 text-[10px]">{{ \Carbon\Carbon::parse($upd->date)->format('d/m/Y') }}</span>
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
+                            <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200/60 pb-2">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-extrabold text-navy-900">Minggu {{ $upd->week_number }}</span>
+                                    <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs">({{ $upd->progress_percentage }}%)</span>
+                                </div>
+                                
+                                <div class="flex items-center space-x-1.5">
+                                    <span class="text-slate-400 text-[10px] mr-1">{{ \Carbon\Carbon::parse($upd->date)->format('d/m/Y') }}</span>
+                                    
+                                    <!-- Tombol Edit Progres -->
+                                    <button type="button" 
+                                        onclick="openEditProgressModal({{ json_encode($upd) }}, '{{ route('opd.tasks.progress.update', [$report->id, $upd->id]) }}', {{ $upd->photos->count() }})" 
+                                        class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] rounded-lg border border-amber-200/60 transition inline-flex items-center space-x-1">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                        <span>Edit</span>
+                                    </button>
+
+                                    <!-- Tombol Hapus Progres -->
+                                    <form method="POST" action="{{ route('opd.tasks.progress.delete', [$report->id, $upd->id]) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus catatan progres Minggu ke-{{ $upd->week_number }} ini beserta seluruh fotonya?');" class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                            class="px-2 py-1 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 font-bold text-[10px] rounded-lg border border-rose-200/60 transition inline-flex items-center space-x-1">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                            <span>Hapus</span>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
+
                             <p class="text-slate-600 text-[11px] leading-relaxed">{{ $upd->description }}</p>
 
                             <!-- Progress photos with delete button (Section 45) -->
                             <div class="grid grid-cols-3 gap-2 pt-1">
                                 @foreach($upd->photos as $pPhoto)
                                     <div class="relative group rounded-lg overflow-hidden border border-slate-200 h-20 bg-slate-900">
-                                        <a href="{{ $pPhoto->file_url }}" class="glightbox block w-full h-full">
+                                        <a href="{{ $pPhoto->file_url }}" class="glightbox block w-full h-full" data-gallery="progress-gallery-{{ $upd->id }}">
                                             <img src="{{ $pPhoto->file_url }}" class="w-full h-full object-cover">
                                         </a>
                                         <!-- 45. OPD Hapus Foto Progres -->
@@ -234,4 +260,96 @@
     </div>
 
 </div>
+
+<!-- Modal Edit Progres Mingguan -->
+<div id="modal-edit-progress" class="fixed inset-0 bg-navy-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-base font-bold text-navy-900 flex items-center">
+                <i class="fa-solid fa-pen-to-square text-amber-500 mr-2"></i> Edit Catatan Progres Mingguan
+            </h3>
+            <button type="button" onclick="closeEditProgressModal()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="form-edit-progress" method="POST" action="" enctype="multipart/form-data" class="space-y-4">
+            @csrf
+            @method('PUT')
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Minggu Ke- <span class="text-rose-500">*</span></label>
+                    <input type="number" name="week_number" id="edit_week_number" min="1" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Tanggal <span class="text-rose-500">*</span></label>
+                    <input type="date" name="date" id="edit_date" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Progres (%) <span class="text-rose-500">*</span></label>
+                    <select name="progress_percentage" id="edit_progress_percentage" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
+                        @for ($i = 10; $i <= 100; $i += 10)
+                            <option value="{{ $i }}">{{ $i }}%</option>
+                        @endfor
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Keterangan Pekerjaan Mingguan <span class="text-rose-500">*</span></label>
+                <textarea name="description" id="edit_description" rows="3" required placeholder="Tuliskan keterangan detail pekerjaan mingguan..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none"></textarea>
+            </div>
+
+            <div class="space-y-1.5" id="edit_photo_container">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Tambah Foto Dokumentasi (Opsional)</label>
+                <input type="file" name="photos[]" id="edit_photos" multiple accept="image/jpeg,image/png,image/webp,image/jpg" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
+                <p id="edit_photo_helper" class="text-[11px] text-slate-400">Total akumulasi foto maksimal 3 foto per minggu.</p>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeEditProgressModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+                    Batal
+                </button>
+                <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-navy-950 font-extrabold text-xs rounded-xl shadow transition">
+                    <i class="fa-solid fa-check mr-1"></i> Simpan Perubahan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+    function openEditProgressModal(data, updateUrl, currentPhotoCount) {
+        const modal = document.getElementById('modal-edit-progress');
+        const form = document.getElementById('form-edit-progress');
+        
+        form.action = updateUrl;
+        document.getElementById('edit_week_number').value = data.week_number;
+        document.getElementById('edit_date').value = (data.date || '').substring(0, 10);
+        document.getElementById('edit_progress_percentage').value = parseInt(data.progress_percentage);
+        document.getElementById('edit_description').value = data.description;
+        
+        const photoInput = document.getElementById('edit_photos');
+        const photoHelper = document.getElementById('edit_photo_helper');
+        photoInput.value = '';
+        
+        const remainingSlots = 3 - (currentPhotoCount || 0);
+        if (remainingSlots <= 0) {
+            photoHelper.textContent = 'Sudah mencapai batas maksimal 3 foto. Hapus salah satu foto terlebih dahulu jika ingin mengganti.';
+            photoInput.disabled = true;
+        } else {
+            photoHelper.textContent = `Saat ini ada ${currentPhotoCount || 0} foto. Anda dapat menambahkan hingga ${remainingSlots} foto lagi (Maks 5 MB/foto).`;
+            photoInput.disabled = false;
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeEditProgressModal() {
+        document.getElementById('modal-edit-progress').classList.add('hidden');
+    }
+</script>
+@endpush

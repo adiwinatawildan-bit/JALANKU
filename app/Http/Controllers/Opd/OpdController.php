@@ -314,6 +314,134 @@ class OpdController extends Controller
         });
     }
 
+    public function updateProgress(Request $request, $id, $progressId)
+    {
+        $user = Auth::user();
+        $report = Report::findOrFail($id);
+        $progressUpdate = ProgressUpdate::where('report_id', $report->id)->findOrFail($progressId);
+
+        $validated = $request->validate([
+            'week_number' => ['required', 'integer', 'min:1'],
+            'date' => ['required', 'date'],
+            'progress_percentage' => ['required', 'numeric', 'between:1,100'],
+            'description' => ['required', 'string'],
+            'photos' => ['nullable', 'array', 'max:3'],
+            'photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ], [
+            'photos.max' => 'Maksimal 3 foto untuk dokumentasi progres.',
+            'photos.*.max' => 'Ukuran setiap foto tidak boleh lebih dari 5 MB.',
+        ]);
+
+        return DB::transaction(function () use ($report, $progressUpdate, $validated, $request, $user) {
+            $currentPhotoCount = $progressUpdate->photos()->count();
+            if ($request->hasFile('photos')) {
+                $newPhotosCount = count($request->file('photos'));
+                if ($currentPhotoCount + $newPhotosCount > 3) {
+                    return back()->with('error', "Total foto untuk progres minggu ini melebihi batas maksimal 3 foto (sudah ada {$currentPhotoCount} foto).");
+                }
+            }
+
+            // Update Progress record
+            $progressUpdate->update([
+                'week_number' => $validated['week_number'],
+                'date' => $validated['date'],
+                'progress_percentage' => $validated['progress_percentage'],
+                'description' => $validated['description'],
+            ]);
+
+            // If new photos uploaded
+            if ($request->hasFile('photos')) {
+                $files = $request->file('photos');
+                $index = $currentPhotoCount + 1;
+                foreach ($files as $file) {
+                    $stored = $this->storageService->uploadProgressPhoto(
+                        $file,
+                        $report->id,
+                        (int) $validated['week_number'],
+                        $index
+                    );
+
+                    ProgressPhoto::create([
+                        'progress_update_id' => $progressUpdate->id,
+                        'file_name' => $stored['file_name'],
+                        'file_path' => $stored['file_path'],
+                        'file_url' => $stored['file_url'],
+                        'caption' => "Dokumentasi Minggu {$validated['week_number']} - Foto {$index}",
+                        'uploaded_by' => $user->id,
+                    ]);
+                    $index++;
+                }
+            }
+
+            // Recalculate Report Status based on latest progress
+            $latestProgress = $report->progressUpdates()->latest('week_number')->first();
+            $maxProgress = $latestProgress ? (float) $latestProgress->progress_percentage : 0;
+            $isComplete = $maxProgress >= 100.0;
+            $newStatus = $isComplete ? Report::STATUS_SELESAI : Report::STATUS_SEDANG_DIPERBAIKI;
+
+            $report->update([
+                'status' => $newStatus,
+                'completed_at' => $isComplete ? ($report->completed_at ?? now()) : null,
+            ]);
+
+            AuditLog::record(
+                activity: "Edit Progress Minggu {$validated['week_number']}",
+                targetType: 'ProgressUpdate',
+                targetId: $progressUpdate->id,
+                description: "Petugas {$user->name} mengubah data progres minggu ke-{$validated['week_number']} ({$validated['progress_percentage']}%).",
+                userId: $user->id
+            );
+
+            return back()->with('success', "Catatan progres Minggu ke-{$validated['week_number']} berhasil diperbarui.");
+        });
+    }
+
+    public function deleteProgress($id, $progressId)
+    {
+        $user = Auth::user();
+        $report = Report::findOrFail($id);
+        $progressUpdate = ProgressUpdate::where('report_id', $report->id)->findOrFail($progressId);
+
+        return DB::transaction(function () use ($report, $progressUpdate, $user) {
+            $weekNum = $progressUpdate->week_number;
+
+            // Delete all associated photos from storage and database
+            foreach ($progressUpdate->photos as $photo) {
+                $this->storageService->deleteProgressPhoto($photo, $user->id);
+            }
+
+            // Delete ProgressUpdate
+            $progressUpdate->delete();
+
+            // Recalculate Report Status
+            $latestRemaining = $report->progressUpdates()->latest('week_number')->first();
+            if ($latestRemaining) {
+                $isComplete = (float) $latestRemaining->progress_percentage >= 100.0;
+                $newStatus = $isComplete ? Report::STATUS_SELESAI : Report::STATUS_SEDANG_DIPERBAIKI;
+                $report->update([
+                    'status' => $newStatus,
+                    'completed_at' => $isComplete ? ($report->completed_at ?? now()) : null,
+                ]);
+            } else {
+                $newStatus = $report->survey_at ? Report::STATUS_SURVEI : Report::STATUS_DITUGASKAN;
+                $report->update([
+                    'status' => $newStatus,
+                    'completed_at' => null,
+                ]);
+            }
+
+            AuditLog::record(
+                activity: "Hapus Progress Minggu {$weekNum}",
+                targetType: 'ProgressUpdate',
+                targetId: $progressUpdate->id,
+                description: "Petugas {$user->name} menghapus seluruh catatan progres minggu ke-{$weekNum} pada laporan #{$report->ticket_number}.",
+                userId: $user->id
+            );
+
+            return back()->with('success', "Catatan progres Minggu ke-{$weekNum} beserta dokumentasinya berhasil dihapus.");
+        });
+    }
+
     public function deleteProgressPhoto($photoId)
     {
         $user = Auth::user();

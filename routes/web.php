@@ -73,6 +73,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/tugas/{id}', [OpdController::class, 'show'])->name('tasks.show');
         Route::post('/tugas/{id}/survei', [OpdController::class, 'startSurvey'])->name('tasks.survey');
         Route::post('/tugas/{id}/progres', [OpdController::class, 'storeProgress'])->name('tasks.progress');
+        Route::put('/tugas/{id}/progres/{progressId}', [OpdController::class, 'updateProgress'])->name('tasks.progress.update');
+        Route::delete('/tugas/{id}/progres/{progressId}', [OpdController::class, 'deleteProgress'])->name('tasks.progress.delete');
         Route::delete('/foto-progres/{id}', [OpdController::class, 'deleteProgressPhoto'])->name('tasks.delete-photo');
     });
 
