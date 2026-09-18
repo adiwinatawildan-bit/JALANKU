@@ -385,14 +385,27 @@ class YoloService
                 $white = imagecolorallocate($dst, 255, 255, 255);
                 imagefilledrectangle($dst, 0, 0, $newW, $newH, $white);
                 imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $width, $height);
-                imagejpeg($dst, $optPath, 85);
+                // Try JPEG first, fallback to PNG if imagejpeg is not compiled into GD build
+                if (function_exists('imagejpeg')) {
+                    imagejpeg($dst, $optPath, 85);
+                } elseif (function_exists('imagepng')) {
+                    $optPng = $cacheDir . '/' . 'opt_' . md5($filePath . filemtime($filePath) . filesize($filePath)) . '.png';
+                    imagepng($dst, $optPng, 6);
+                    $optPath = $optPng;
+                }
                 imagedestroy($dst);
             } else {
                 $dst = imagecreatetruecolor($width, $height);
                 $white = imagecolorallocate($dst, 255, 255, 255);
                 imagefilledrectangle($dst, 0, 0, $width, $height, $white);
                 imagecopyresampled($dst, $src, 0, 0, 0, 0, $width, $height, $width, $height);
-                imagejpeg($dst, $optPath, 85);
+                if (function_exists('imagejpeg')) {
+                    imagejpeg($dst, $optPath, 85);
+                } elseif (function_exists('imagepng')) {
+                    $optPng = $cacheDir . '/' . 'opt_' . md5($filePath . filemtime($filePath) . filesize($filePath)) . '.png';
+                    imagepng($dst, $optPng, 6);
+                    $optPath = $optPng;
+                }
                 imagedestroy($dst);
             }
 

@@ -5,6 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
     libpq-dev \
@@ -16,8 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-venv \
-    && pip3 install --no-cache-dir --break-system-packages ultralytics \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql pgsql mbstring zip bcmath gd \
+    && pip3 install --no-cache-dir --break-system-packages ultralytics \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
