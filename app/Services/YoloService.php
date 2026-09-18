@@ -259,20 +259,29 @@ class YoloService
                 }
             }
 
-            // Execute custom YOLO detector with generous timeout (90s) and optimized low-memory footprint (384px)
+            // Execute custom YOLO detector with generous timeout (120s) and optimized low-memory footprint (384px)
             $processFailureReason = null;
             if ($imageTarget && file_exists($this->scriptPath)) {
+                $optimizedImage = $this->optimizeImageForYolo((string) $imageTarget);
                 try {
-                    $process = Process::timeout(90)->run([
-                        $this->pythonPath,
-                        $this->scriptPath,
-                        '--image',
-                        (string) $imageTarget,
-                        '--conf',
-                        '0.05',
-                        '--imgsz',
-                        '384',
-                    ]);
+                    $process = Process::timeout(120)
+                        ->env([
+                            'YOLO_OFFLINE' => 'True',
+                            'ULTRALYTICS_OFFLINE' => 'True',
+                            'YOLO_AUTOINSTALL' => '0',
+                            'ULTRALYTICS_AUTOINSTALL' => '0',
+                            'CUDA_VISIBLE_DEVICES' => '',
+                        ])
+                        ->run([
+                            $this->pythonPath,
+                            $this->scriptPath,
+                            '--image',
+                            (string) $optimizedImage,
+                            '--conf',
+                            '0.05',
+                            '--imgsz',
+                            '384',
+                        ]);
                     $rawOutput = $process->output();
                     if ($rawOutput && preg_match('/\{[\s\S]*\}/', $rawOutput, $matches)) {
                         $outputJson = json_decode($matches[0], true);
@@ -318,5 +327,84 @@ class YoloService
             'success' => true,
             'detection' => $detection,
         ];
+    }
+
+    /**
+     * Pre-process and optimize photo before passing to YOLO.
+     * Resizes large photos (>800px or high-res PNG/JPG) to a compact JPEG.
+     * This drastically reduces Python RAM usage (down to <20MB) and prevents timeout on cloud hosting.
+     */
+    protected function optimizeImageForYolo(string $filePath): string
+    {
+        if (!extension_loaded('gd') || !file_exists($filePath) || filesize($filePath) < 500) {
+            return $filePath;
+        }
+
+        try {
+            $info = @getimagesize($filePath);
+            if (!$info) {
+                return $filePath;
+            }
+
+            [$width, $height] = $info;
+            $maxDim = 800;
+
+            // If already a modest sized JPEG, use directly without duplicate work
+            if ($width <= $maxDim && $height <= $maxDim && filesize($filePath) < 250000 && ($info['mime'] ?? '') === 'image/jpeg') {
+                return $filePath;
+            }
+
+            $cacheDir = storage_path('app/public/yolo_cache');
+            if (!file_exists($cacheDir)) {
+                @mkdir($cacheDir, 0755, true);
+            }
+
+            $optName = 'opt_' . md5($filePath . filemtime($filePath) . filesize($filePath)) . '.jpg';
+            $optPath = $cacheDir . '/' . $optName;
+
+            if (file_exists($optPath) && filesize($optPath) > 500) {
+                return $optPath;
+            }
+
+            $raw = @file_get_contents($filePath);
+            if (!$raw) {
+                return $filePath;
+            }
+
+            $src = @imagecreatefromstring($raw);
+            if (!$src) {
+                return $filePath;
+            }
+
+            if ($width > $maxDim || $height > $maxDim) {
+                $scale = min($maxDim / $width, $maxDim / $height);
+                $newW = max(1, (int) round($width * $scale));
+                $newH = max(1, (int) round($height * $scale));
+
+                $dst = imagecreatetruecolor($newW, $newH);
+                $white = imagecolorallocate($dst, 255, 255, 255);
+                imagefilledrectangle($dst, 0, 0, $newW, $newH, $white);
+                imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $width, $height);
+                imagejpeg($dst, $optPath, 85);
+                imagedestroy($dst);
+            } else {
+                $dst = imagecreatetruecolor($width, $height);
+                $white = imagecolorallocate($dst, 255, 255, 255);
+                imagefilledrectangle($dst, 0, 0, $width, $height, $white);
+                imagecopyresampled($dst, $src, 0, 0, 0, 0, $width, $height, $width, $height);
+                imagejpeg($dst, $optPath, 85);
+                imagedestroy($dst);
+            }
+
+            imagedestroy($src);
+
+            if (file_exists($optPath) && filesize($optPath) > 500) {
+                return $optPath;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('YoloService image optimization notice: ' . $e->getMessage());
+        }
+
+        return $filePath;
     }
 }

@@ -6,9 +6,14 @@ PORT=${PORT:-80}
 sed -i "s/80/$PORT/g" /etc/apache2/ports.conf
 sed -i "s/:80/:$PORT/g" /etc/apache2/sites-available/*.conf
 
-# Set writable directories for AI / YOLO
+# Set writable directories and offline flags for AI / YOLO
 export YOLO_CONFIG_DIR=/tmp
 export TORCH_HOME=/tmp
+export YOLO_OFFLINE=True
+export ULTRALYTICS_OFFLINE=True
+export YOLO_AUTOINSTALL=0
+export ULTRALYTICS_AUTOINSTALL=0
+export CUDA_VISIBLE_DEVICES=""
 
 # Laravel Setup
 php artisan storage:link || true

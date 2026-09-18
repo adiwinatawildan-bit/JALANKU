@@ -15,14 +15,28 @@ import sys
 import tempfile
 from typing import Any, Dict, List
 
+# Force strictly offline mode and disable GPU probing to prevent network hangs & driver timeouts
+os.environ["YOLO_OFFLINE"] = "True"
+os.environ["ULTRALYTICS_OFFLINE"] = "True"
+os.environ["YOLO_AUTOINSTALL"] = "False"
+os.environ["ULTRALYTICS_AUTOINSTALL"] = "False"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ["YOLO_VERBOSE"] = "False"
+
 # Ensure writable temp directories for container environments (Render, Docker, www-data)
 _safe_tmp = tempfile.gettempdir()
 os.environ.setdefault("YOLO_CONFIG_DIR", _safe_tmp)
 os.environ.setdefault("TORCH_HOME", _safe_tmp)
-os.environ["YOLO_VERBOSE"] = "False"
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
+
+# Prevent Ultralytics from attempting to download Arial.ttf or checking PyPI in container
+try:
+    import ultralytics.utils.checks as _checks
+    _checks.check_font = lambda font="Arial.ttf": ""
+    _checks.check_latest_pypi_version = lambda *args, **kwargs: None
+    _checks.check_version = lambda *args, **kwargs: True
+    _checks.check_requirements = lambda *args, **kwargs: True
+except Exception:
+    pass
 
 
 def analyze_image(image_path: str, confidence_threshold: float = 0.05, imgsz: int = 384) -> Dict[str, Any]:
@@ -59,6 +73,26 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.05, imgsz: in
                 "success": False,
                 "error": f"Image file not found: {target_image_path}"
             }
+
+    temp_resized_path = None
+    # Downscale large image or convert PNG/RGBA to lightweight JPEG to protect memory on 512MB hosting
+    try:
+        from PIL import Image
+        with Image.open(target_image_path) as img:
+            w, h = img.size
+            if max(w, h) > 800 or img.format != "JPEG" or img.mode != "RGB":
+                scale = min(800.0 / max(w, h), 1.0)
+                new_size = (max(1, int(w * scale)), max(1, int(h * scale)))
+                resample_mode = Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS
+                resized_img = img.convert("RGB").resize(new_size, resample=resample_mode)
+
+                temp_resized = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                temp_resized_path = temp_resized.name
+                temp_resized.close()
+                resized_img.save(temp_resized_path, "JPEG", quality=85)
+                target_image_path = temp_resized_path
+    except Exception:
+        pass
 
     results: Dict[str, Any] = {
         "success": True,
@@ -171,6 +205,11 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.05, imgsz: in
         if temp_download_path and os.path.exists(temp_download_path):
             try:
                 os.remove(temp_download_path)
+            except Exception:
+                pass
+        if temp_resized_path and os.path.exists(temp_resized_path):
+            try:
+                os.remove(temp_resized_path)
             except Exception:
                 pass
 

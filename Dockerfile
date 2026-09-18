@@ -27,6 +27,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 ENV YOLO_CONFIG_DIR=/tmp
 ENV TORCH_HOME=/tmp
+ENV YOLO_OFFLINE=True
+ENV ULTRALYTICS_OFFLINE=True
+ENV YOLO_AUTOINSTALL=0
+ENV ULTRALYTICS_AUTOINSTALL=0
+ENV CUDA_VISIBLE_DEVICES=""
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
     && a2enmod rewrite
