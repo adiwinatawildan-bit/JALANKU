@@ -49,7 +49,6 @@
                     <option value="pothole">Lubang Jalan (Pothole)</option>
                     <option value="crack">Retak Jalan (Crack)</option>
                     <option value="landslide">Longsor / Amblas (Landslide)</option>
-                    <option value="lainnya">Kerusakan Lainnya</option>
                 </select>
             </div>
 

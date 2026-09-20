@@ -52,7 +52,6 @@
                     <option value="pothole" {{ request('damage_type') === 'pothole' ? 'selected' : '' }}>Lubang Jalan (Pothole)</option>
                     <option value="crack" {{ request('damage_type') === 'crack' ? 'selected' : '' }}>Retak Jalan (Crack)</option>
                     <option value="landslide" {{ request('damage_type') === 'landslide' ? 'selected' : '' }}>Longsor / Amblas (Landslide)</option>
-                    <option value="lainnya" {{ request('damage_type') === 'lainnya' ? 'selected' : '' }}>Kerusakan Lainnya</option>
                 </select>
             </div>
 

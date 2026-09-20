@@ -23,10 +23,10 @@
                 <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Tahap 1: Pengaduan Masyarakat</span>
                 <h3 class="text-xl font-bold text-navy-900">Masyarakat Melaporkan Kondisi Jalan Rusak</h3>
                 <p class="text-sm text-slate-600 leading-relaxed">
-                    Warga dapat mengambil foto kerusakan jalan di lokasi (maksimal 3 foto kondisi awal), menentukan titik koordinat GPS secara presisi menggunakan peta interaktif, serta mengisi rincian seperti nama jalan, kecamatan, desa, dan tingkat gangguan.
+                    Warga dapat mengambil foto kerusakan jalan di lokasi (maksimal 1 foto kondisi awal), menentukan titik koordinat GPS secara presisi menggunakan peta interaktif, serta mengisi rincian seperti nama jalan, kecamatan, desa, dan tingkat gangguan.
                 </p>
                 <div class="pt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                    <span class="bg-slate-100 px-3 py-1 rounded-full"><i class="fa-solid fa-camera text-amber-500 mr-1"></i> Maks. 3 Foto Awal</span>
+                    <span class="bg-slate-100 px-3 py-1 rounded-full"><i class="fa-solid fa-camera text-amber-500 mr-1"></i> Maks. 1 Foto Awal</span>
                     <span class="bg-slate-100 px-3 py-1 rounded-full"><i class="fa-solid fa-map-pin text-rose-500 mr-1"></i> Titik Koordinat GPS</span>
                     <span class="bg-slate-100 px-3 py-1 rounded-full"><i class="fa-solid fa-shield-halved text-sky-500 mr-1"></i> Privasi Pelapor Terlindungi</span>
                 </div>
