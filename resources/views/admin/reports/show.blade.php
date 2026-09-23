@@ -34,14 +34,6 @@
             @endif
 
 
-            <!-- Run YOLO AI Analysis -->
-            <form method="POST" action="{{ route('admin.reports.yolo', $report->id) }}">
-                @csrf
-                <button type="submit" class="px-4 py-2 bg-navy-900 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow transition flex items-center space-x-1.5">
-                    <i class="fa-solid fa-brain text-amber-400"></i>
-                    <span>Jalankan YOLO AI</span>
-                </button>
-            </form>
 
             <!-- Delete Report Button -->
             <form method="POST" action="{{ route('admin.reports.delete', $report->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus laporan #{{ $report->ticket_number }} secara permanen? Seluruh foto, progres, dan data terkait akan dihapus total dari database.');">
@@ -229,7 +221,7 @@
                     </div>
                 @else
                     <div class="text-center py-4 text-slate-400 text-xs">
-                        Belum ada data deteksi YOLO. Klik tombol "Jalankan YOLO AI" di atas untuk menganalisis foto.
+                        Foto belum dianalisis atau dalam antrean pemrosesan model AI.
                     </div>
                 @endif
             </div>

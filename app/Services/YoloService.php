@@ -38,9 +38,9 @@ class YoloService
      */
     public function analyzeReport(Report $report, ?int $userId = null): array
     {
-        $photos = $report->initialPhotos;
+        $photos = $report->initialPhotos()->get();
         if ($photos->isEmpty()) {
-            $photos = $report->photos;
+            $photos = $report->photos()->get();
         }
 
         if ($photos->isEmpty()) {

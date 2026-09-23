@@ -249,10 +249,11 @@ class ReportController extends Controller
 
         // 3. Run YOLO AI Analysis & TOPSIS safely without breaking report flow
         try {
+            $report->unsetRelations();
             $yoloResult = $this->yoloService->analyzeReport($report, $user->id);
             if (!empty($yoloResult['success'])) {
                 if (($yoloResult['landslides'] ?? 0) > 0) {
-                    $report->update(['damage_type' => 'landslide', 'disturbance_level' => 'sangat_parah']);
+                    $report->update(['damage_type' => 'landslide', 'disturbance_level' => ($yoloResult['landslides'] >= 2 ? 'sangat_parah' : 'tinggi')]);
                 } elseif (($yoloResult['potholes'] ?? 0) > 0) {
                     $report->update(['damage_type' => 'pothole', 'disturbance_level' => ($yoloResult['potholes'] >= 3 ? 'tinggi' : 'sedang')]);
                 } elseif (($yoloResult['cracks'] ?? 0) > 0) {
