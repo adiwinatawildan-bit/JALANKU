@@ -28,15 +28,18 @@ _safe_tmp = tempfile.gettempdir()
 os.environ.setdefault("YOLO_CONFIG_DIR", _safe_tmp)
 os.environ.setdefault("TORCH_HOME", _safe_tmp)
 
-# Prevent Ultralytics from attempting to download Arial.ttf or checking PyPI in container
-try:
-    import ultralytics.utils.checks as _checks
-    _checks.check_font = lambda font="Arial.ttf": ""
-    _checks.check_latest_pypi_version = lambda *args, **kwargs: None
-    _checks.check_version = lambda *args, **kwargs: True
-    _checks.check_requirements = lambda *args, **kwargs: True
-except Exception:
-    pass
+
+def _patch_ultralytics_checks():
+    """Prevent Ultralytics from attempting to download Arial.ttf or checking PyPI in container."""
+    try:
+        import ultralytics.utils.checks as _checks
+        _checks.check_font = lambda font="Arial.ttf": ""
+        _checks.check_latest_pypi_version = lambda *args, **kwargs: None
+        _checks.check_version = lambda *args, **kwargs: True
+        _checks.check_requirements = lambda *args, **kwargs: True
+    except Exception:
+        pass
+
 
 
 def analyze_image_onnx(target_image_path: str, onnx_path: str, conf_threshold: float = 0.05) -> Dict[str, Any] | None:
@@ -246,6 +249,7 @@ def analyze_image(image_path: str, confidence_threshold: float = 0.05, imgsz: in
         torch.set_num_threads(1)
         torch.set_grad_enabled(False)
 
+        _patch_ultralytics_checks()
         from ultralytics import YOLO
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
