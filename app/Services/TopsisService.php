@@ -165,10 +165,20 @@ class TopsisService
 
         foreach ($scores as $reportId => $data) {
             $score = $data['score'];
+            $raw = $data['raw_values'];
+            $c1Damage = (float) ($raw['C1'] ?? 1.0);
+            $c2Safety = (float) ($raw['C2'] ?? 1.0);
+            $c3Count = (float) ($raw['C3'] ?? 1.0);
+
+            // Determine Priority Category:
+            // - Landslides, high TOPSIS score, or Rank 1 -> Sangat Prioritas
+            // - Multiple potholes (>=3) / severe damage / accumulated complaints -> Prioritas Tinggi
+            // - Moderate defects / 1-2 potholes / cracks -> Sedang
+            // - Minor / normal roads -> Rendah
             $level = match (true) {
-                $score >= 0.70 || $rank === 1 => 'Sangat Prioritas',
-                $score >= 0.45 => 'Prioritas Tinggi',
-                $score >= 0.25 => 'Sedang',
+                $score >= 0.65 || $rank === 1 || ($c1Damage >= 4.6 && $c2Safety >= 4.6) => 'Sangat Prioritas',
+                $score >= 0.35 || $c1Damage >= 3.8 || $c3Count >= 2 => 'Prioritas Tinggi',
+                $score >= 0.15 || $c1Damage >= 2.4 => 'Sedang',
                 default => 'Rendah',
             };
 
@@ -335,10 +345,12 @@ class TopsisService
         $reasons = [];
 
         if ($level === 'Sangat Prioritas' || $level === 'Prioritas Tinggi') {
-            if (($raw['C1'] ?? 0) >= 4.0) {
+            if (($raw['C1'] ?? 0) >= 4.5) {
+                $reasons[] = 'tingkat kerusakan longsor/sangat parah berdasarkan deteksi model AI YOLO';
+            } elseif (($raw['C1'] ?? 0) >= 3.8) {
                 $reasons[] = 'tingkat kerusakan sangat parah/luas berdasarkan deteksi model AI YOLO';
             }
-            if (($raw['C2'] ?? 0) >= 4.0) {
+            if (($raw['C2'] ?? 0) >= 3.7) {
                 $reasons[] = 'berisiko tinggi terhadap keselamatan pengguna jalan';
             }
             if (($raw['C3'] ?? 0) >= 2) {
