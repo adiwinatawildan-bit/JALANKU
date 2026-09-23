@@ -113,49 +113,20 @@ class TopsisService
         }
 
         // 4. Positive Ideal (A+) and Negative Ideal (A-)
-        // Use theoretical scale anchor bounds to prevent relative collapse to 0.0000 when dataset has few reports
-        $theoreticalMin = [
-            'C1' => 1.0, // Skala 1.0 (Normal / tidak ada cacat)
-            'C2' => 1.0, // Skala 1.0 (Aman)
-            'C3' => 1.0, // 1 laporan awal
-            'C4' => 1.0, // 1 hari pending
-            'C5' => 1.0,
-            'C6' => 1.0,
-            'C7' => 1.0,
-            'C8' => 1.0,
-        ];
-        $theoreticalMax = [
-            'C1' => 5.0, // Skala 5.0 (Longsor / kerusakan parah)
-            'C2' => 5.0, // Skala 5.0 (Sangat membahayakan)
-            'C3' => 10.0, // 10 aduan masyarakat akumulasi
-            'C4' => 30.0, // 30 hari pending
-            'C5' => 5.0,
-            'C6' => 5.0,
-            'C7' => 5.0,
-            'C8' => 30.0,
-        ];
-
         $idealPositive = [];
         $idealNegative = [];
         foreach ($criteria as $criterion) {
             $code = $criterion->code;
             $colValues = array_column($weightedMatrix, $code);
-            $observedMax = !empty($colValues) ? max($colValues) : 0;
-            $observedMin = !empty($colValues) ? min($colValues) : 0;
-
-            $divisor = $divisors[$code] ?: 1.0;
-            $anchorMax = (($theoreticalMax[$code] ?? 5.0) / $divisor) * $weights[$code];
-            $anchorMin = (($theoreticalMin[$code] ?? 1.0) / $divisor) * $weights[$code];
-
-            $effectiveMax = max($observedMax, $anchorMax);
-            $effectiveMin = min($observedMin, $anchorMin);
+            $max = !empty($colValues) ? max($colValues) : 0;
+            $min = !empty($colValues) ? min($colValues) : 0;
 
             if ($criteriaTypes[$code] === 'cost') {
-                $idealPositive[$code] = $effectiveMin;
-                $idealNegative[$code] = $effectiveMax;
+                $idealPositive[$code] = $min;
+                $idealNegative[$code] = $max;
             } else {
-                $idealPositive[$code] = $effectiveMax;
-                $idealNegative[$code] = $effectiveMin;
+                $idealPositive[$code] = $max;
+                $idealNegative[$code] = $min;
             }
         }
 
@@ -173,7 +144,7 @@ class TopsisService
             $dMin = sqrt($dMinSum);
 
             $denominator = $dPlus + $dMin;
-            $v = $denominator > 0 ? ($dMin / $denominator) : 0.5;
+            $v = $denominator > 0 ? ($dMin / $denominator) : ($reports->count() === 1 ? 1.0 : 0.5);
 
             $scores[$reportId] = [
                 'report_id' => $reportId,
@@ -195,9 +166,9 @@ class TopsisService
         foreach ($scores as $reportId => $data) {
             $score = $data['score'];
             $level = match (true) {
-                $score >= 0.75 => 'Sangat Prioritas',
-                $score >= 0.55 => 'Prioritas Tinggi',
-                $score >= 0.40 => 'Sedang',
+                $score >= 0.70 || $rank === 1 => 'Sangat Prioritas',
+                $score >= 0.45 => 'Prioritas Tinggi',
+                $score >= 0.25 => 'Sedang',
                 default => 'Rendah',
             };
 
