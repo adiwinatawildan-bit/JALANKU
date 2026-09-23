@@ -21,30 +21,91 @@
 
     <!-- Overview Banner -->
     <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div class="space-y-2 max-w-2xl flex-1">
                 <span class="text-xs font-bold text-amber-600 uppercase tracking-widest">{{ $report->kecamatan }}, {{ $report->desa }}</span>
-                <h2 class="text-2xl font-extrabold text-navy-900 mt-0.5">{{ $report->road_name }}</h2>
-                <p class="text-xs text-slate-600 mt-1">{{ $report->title }}</p>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 tracking-tight">{{ $report->road_name }}</h2>
+                <p class="text-xs font-bold text-slate-700">{{ $report->title }}</p>
+                
+                @if($report->location?->address_detail)
+                    <div class="flex items-start space-x-2.5 text-xs text-amber-950 bg-amber-50/90 border border-amber-200 p-3.5 rounded-2xl mt-2">
+                        <i class="fa-solid fa-location-crosshairs text-amber-600 mt-0.5 shrink-0 text-sm"></i>
+                        <div>
+                            <strong class="font-bold text-amber-900 block">Patokan / Detail Alamat Lapangan:</strong>
+                            <p class="text-amber-950 mt-0.5 font-medium leading-relaxed">{{ $report->location->address_detail }}</p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($report->description)
+                    <div class="flex items-start space-x-2.5 text-xs text-slate-700 bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl mt-2">
+                        <i class="fa-solid fa-align-left text-slate-400 mt-0.5 shrink-0"></i>
+                        <div>
+                            <strong class="font-bold text-navy-900 block">Deskripsi & Catatan Kerusakan Warga:</strong>
+                            <p class="text-slate-600 mt-0.5 leading-relaxed">{{ $report->description }}</p>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Navigation GPS Action Buttons for Field Officers -->
+                @if($report->location?->latitude && $report->location?->longitude)
+                    <div class="flex flex-wrap items-center gap-2.5 pt-2">
+                        <a href="https://www.google.com/maps/dir/?api=1&destination={{ $report->location->latitude }},{{ $report->location->longitude }}" 
+                           target="_blank" 
+                           class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition inline-flex items-center space-x-2">
+                            <i class="fa-solid fa-diamond-turn-right text-emerald-200"></i>
+                            <span>Buka Rute di Google Maps</span>
+                        </a>
+
+                        <a href="https://maps.google.com/?q={{ $report->location->latitude }},{{ $report->location->longitude }}" 
+                           target="_blank" 
+                           class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition inline-flex items-center space-x-1.5">
+                            <i class="fa-solid fa-location-dot text-rose-500"></i>
+                            <span>Lihat Titik Koordinat</span>
+                        </a>
+                    </div>
+                @endif
             </div>
             
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center min-w-[170px]">
-                <span class="text-[10px] font-bold text-slate-400 uppercase">Capaian Progres</span>
-                <p class="text-3xl font-extrabold text-navy-900 mt-1">{{ $report->current_progress }}%</p>
-                <div class="w-full h-2 bg-slate-200 rounded-full mt-2 overflow-hidden">
-                    <div class="h-full bg-emerald-500 rounded-full" style="width: {{ $report->current_progress }}%"></div>
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-center min-w-[200px] shrink-0 self-stretch sm:self-auto flex flex-col justify-center">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Capaian Progres Fisik</span>
+                <p class="text-4xl font-extrabold text-navy-900 mt-1">{{ $report->current_progress }}%</p>
+                <div class="w-full h-2.5 bg-slate-200 rounded-full mt-3 overflow-hidden">
+                    <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: {{ $report->current_progress }}%"></div>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-100 text-xs">
+        @php
+            $detections = $report->damageDetections;
+            $totalLandslides = $detections->sum(fn($d) => $d->detected_classes['landslide'] ?? 0);
+            $totalPotholes = $detections->sum(fn($d) => $d->detected_classes['pothole'] ?? 0);
+            $totalCracks = $detections->sum(fn($d) => $d->detected_classes['crack'] ?? 0);
+            $totalArea = $detections->sum('damaged_area_sqm');
+        @endphp
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-4 border-t border-slate-100 text-xs">
             <div>
-                <span class="text-slate-400 block font-semibold">Jenis Cacat</span>
-                <span class="font-bold text-navy-900">{{ $report->damage_type_label }}</span>
+                <span class="text-slate-400 block font-semibold">Jenis Kerusakan</span>
+                <span class="font-bold text-navy-900">
+                    @if($totalLandslides > 0)
+                        Longsor ({{ $totalLandslides }} Titik)
+                    @elseif($totalPotholes > 0)
+                        Lubang ({{ $totalPotholes }} Titik)
+                    @elseif($totalCracks > 0)
+                        Retakan ({{ $totalCracks }} Titik)
+                    @else
+                        {{ $report->damage_type_label }}
+                    @endif
+                </span>
             </div>
             <div>
                 <span class="text-slate-400 block font-semibold">Tingkat Gangguan</span>
                 <span class="font-bold text-navy-900">{{ ucfirst($report->disturbance_level) }}</span>
+            </div>
+            <div>
+                <span class="text-slate-400 block font-semibold">Estimasi Luas Rusak</span>
+                <span class="font-bold text-emerald-600">{{ $totalArea > 0 ? $totalArea . ' m²' : 'Perlu Survei' }}</span>
             </div>
             <div>
                 <span class="text-slate-400 block font-semibold">Koordinat GPS</span>

@@ -111,7 +111,8 @@ class OpdController extends Controller
             'progressUpdates.photos',
             'statusHistories.changer',
             'priorityResult',
-            'opd'
+            'opd',
+            'damageDetections',
         ]);
 
         if ($user->opd_id && !$user->isAdmin() && !$user->isSuperAdmin()) {
