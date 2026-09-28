@@ -23,6 +23,9 @@ Route::get('/statistik', [PublicController::class, 'statistik'])->name('public.s
 Route::get('/cara-kerja', [PublicController::class, 'caraKerja'])->name('public.cara-kerja');
 Route::get('/tentang', [PublicController::class, 'tentang'])->name('public.tentang');
 Route::get('/api/geo-reports', [PublicController::class, 'apiGeoReports'])->name('api.geo-reports');
+Route::get('/docs', function () {
+    return view('docs.swagger');
+})->name('api.docs');
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {

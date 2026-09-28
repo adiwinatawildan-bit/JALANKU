@@ -27,3 +27,7 @@ Homestead.yaml
 Thumbs.db
 cloudflared.exe
 cloudflared_bin.exe
+__pycache__/
+*.pyc
+~$*
+

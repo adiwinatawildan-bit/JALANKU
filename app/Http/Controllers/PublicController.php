@@ -251,8 +251,8 @@ class PublicController extends Controller
             });
 
             return [
-                'reports' => $reports,
-                'facilities' => $facilities,
+                'reports' => $reports->values()->all(),
+                'facilities' => $facilities->values()->all(),
             ];
         });
 

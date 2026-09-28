@@ -107,10 +107,7 @@
                             <i class="fa-solid fa-list-check w-5 mr-2.5 {{ request()->routeIs('admin.reports.*') ? 'text-navy-950' : 'text-sky-400' }}"></i>
                             Kelola Laporan
                         </a>
-                        <a href="{{ route('public.peta') }}" target="_blank" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                            <i class="fa-solid fa-map-location-dot w-5 mr-2.5 text-emerald-400"></i>
-                            Peta GIS Jalan
-                        </a>
+
                         <a href="{{ route('admin.audit-logs') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.audit-logs') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                             <i class="fa-solid fa-clock-rotate-left w-5 mr-2.5 {{ request()->routeIs('admin.audit-logs') ? 'text-navy-950' : 'text-indigo-400' }}"></i>
                             Audit Log
@@ -237,10 +234,7 @@
                                 <i class="fa-solid fa-list-check w-5 mr-3 {{ request()->routeIs('admin.reports.*') ? 'text-navy-950' : 'text-sky-400' }}"></i>
                                 Kelola Seluruh Laporan
                             </a>
-                            <a href="{{ route('public.peta') }}" target="_blank" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                                <i class="fa-solid fa-map-location-dot w-5 mr-3 text-emerald-400"></i>
-                                Peta GIS Jalan
-                            </a>
+
                             <a href="{{ route('admin.audit-logs') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('admin.audit-logs') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                                 <i class="fa-solid fa-clock-rotate-left w-5 mr-3 {{ request()->routeIs('admin.audit-logs') ? 'text-navy-950' : 'text-indigo-400' }}"></i>
                                 Audit Log

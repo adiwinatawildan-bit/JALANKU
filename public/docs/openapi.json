@@ -1,0 +1,237 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Backend JALAN KU Infrastructure Platform",
+    "description": "Dokumentasi REST API Sistem Informasi Pelaporan Kerusakan Jalan, Deteksi AI YOLO, dan Penentuan Prioritas Penanganan (TOPSIS) - Dinas Komunikasi dan Informatika",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Server Pengembangan Lokal"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Public & GIS Mapping",
+      "description": "API Publik dan Titik Koordinat Peta Interaktif"
+    },
+    {
+      "name": "Auth",
+      "description": "Manajemen Autentikasi dan Sesi Pengguna"
+    },
+    {
+      "name": "Masyarakat Reports",
+      "description": "API Pengajuan dan Pelacakan Laporan Masyarakat"
+    },
+    {
+      "name": "AI Vision Engine (YOLO)",
+      "description": "API Deteksi dan Klasifikasi Kerusakan Jalan Berbasis AI"
+    },
+    {
+      "name": "Decision Support (TOPSIS)",
+      "description": "API Perhitungan dan Pemeringkatan Prioritas Penanganan Jalan"
+    },
+    {
+      "name": "OPD Tasks",
+      "description": "API Manajemen Tugas dan Pelaporan Progres Lapangan OPD"
+    }
+  ],
+  "paths": {
+    "/api/geo-reports": {
+      "get": {
+        "tags": ["Public & GIS Mapping"],
+        "summary": "Mendapatkan data titik sebaran laporan kerusakan jalan & fasilitas umum untuk peta Leaflet",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter berdasarkan status laporan (contoh: DIAJUKAN, DIVERIFIKASI, SEDANG DIPERBAIKI, SELESAI)",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "kecamatan",
+            "in": "query",
+            "description": "Filter berdasarkan nama kecamatan",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "damage_type",
+            "in": "query",
+            "description": "Filter berdasarkan jenis kerusakan (contoh: pothole, crack, landslide)",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data titik sebaran laporan dan fasilitas umum berhasil diambil"
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Autentikasi pengguna ke dalam sistem (Masyarakat, Admin, OPD, SuperAdmin)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "example": "admin@jalanku.go.id" },
+                  "password": { "type": "string", "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login berhasil dan sesi autentikasi dibuat" },
+          "422": { "description": "Kredensial tidak valid" }
+        }
+      }
+    },
+    "/masyarakat/laporan": {
+      "post": {
+        "tags": ["Masyarakat Reports"],
+        "summary": "Mengirimkan laporan kerusakan jalan baru beserta koordinat GPS dan foto",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "example": "Jalan Berlubang Parah" },
+                  "road_name": { "type": "string", "example": "Jl. Raya Otista" },
+                  "kecamatan": { "type": "string", "example": "Tarogong Kidul" },
+                  "desa": { "type": "string", "example": "Jayaraga" },
+                  "latitude": { "type": "number", "example": -7.206471 },
+                  "longitude": { "type": "number", "example": 107.897195 },
+                  "damage_type": { "type": "string", "example": "pothole" },
+                  "disturbance_level": { "type": "string", "example": "sedang" },
+                  "photos": { "type": "array", "items": { "type": "string", "format": "binary" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Laporan berhasil dibuat dan nomor tiket diterbitkan" }
+        }
+      }
+    },
+    "/admin/laporan/{id}/yolo": {
+      "post": {
+        "tags": ["AI Vision Engine (YOLO)"],
+        "summary": "Menjalankan pemrosesan citra AI (YOLO) pada foto laporan untuk mendeteksi lubang/retakan jalan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID Laporan",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Analisis AI selesai dan hasil deteksi disimpan ke damage_detections" }
+        }
+      }
+    },
+    "/admin/recalculate-topsis": {
+      "post": {
+        "tags": ["Decision Support (TOPSIS)"],
+        "summary": "Menjalankan kalkulasi perangkingan multi-kriteria TOPSIS untuk penentuan prioritas penanganan jalan",
+        "responses": {
+          "200": { "description": "Kalkulasi TOPSIS berhasil, nilai preferensi dan ranking diperbarui" }
+        }
+      }
+    },
+    "/admin/laporan/{id}/verifikasi": {
+      "post": {
+        "tags": ["Public & GIS Mapping"],
+        "summary": "Memverifikasi laporan masyarakat yang masuk",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Status laporan diperbarui menjadi DIVERIFIKASI" }
+        }
+      }
+    },
+    "/admin/laporan/{id}/tugaskan": {
+      "post": {
+        "tags": ["Public & GIS Mapping"],
+        "summary": "Menugaskan laporan kerusakan jalan kepada OPD pelaksana teknis (misal: Dinas PUPR)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "opd_id": { "type": "integer", "example": 1 },
+                  "notes": { "type": "string", "example": "Harap segera disurvei lapangan" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Tugas berhasil diteruskan ke OPD" }
+        }
+      }
+    },
+    "/opd/tugas/{id}/progres": {
+      "post": {
+        "tags": ["OPD Tasks"],
+        "summary": "Menyimpan catatan pembaruan progres fisik pengerjaan jalan beserta foto dokumentasi",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "progress_percentage": { "type": "integer", "example": 60 },
+                  "description": { "type": "string", "example": "Pengecoran lapisan dasar selesai" },
+                  "photos": { "type": "array", "items": { "type": "string", "format": "binary" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Progres perbaikan berhasil diperbarui" }
+        }
+      }
+    }
+  }
+}
