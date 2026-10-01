@@ -99,29 +99,43 @@
                             ];
                         }
 
-                        // 3. Progres Mingguan Dinamis Dari OPD (M-1, M-2, M-3, M-4, M-5, dst...)
-                        $updates = $r->progressUpdates->sortBy('week_number');
+                        // 3. Progres Mingguan Dinamis Dari OPD (M-1, M-2, M-3, dst...) & Stage Selesai
+                        $updates = $r->progressUpdates->sortBy('week_number')->values();
+                        $isFinished = ($r->status === \App\Models\Report::STATUS_SELESAI);
+                        $totalUpdates = $updates->count();
+                        $curr = 0;
+
                         foreach ($updates as $up) {
+                            $curr++;
                             $wNum = $up->week_number;
                             $upPhoto = $up->photos->first()?->file_url;
                             $upDesc = !empty($up->description) ? $up->description : "Pengerjaan fisik jalan minggu ke-{$wNum}";
                             
-                            $stages[] = [
-                                'key' => "m-{$wNum}",
-                                'short_name' => "M-{$wNum}",
-                                'label' => "Minggu ke-{$wNum}",
-                                'progress' => "M-{$wNum}: {$upDesc}",
-                                'photo' => $upPhoto ?? $initialPhoto,
-                                'caption' => $upDesc
-                            ];
+                            $isLastAndUpdateFinished = ($isFinished && $curr === $totalUpdates) || ((float)$up->progress_percentage >= 100.0);
+
+                            if ($isLastAndUpdateFinished) {
+                                $stages[] = [
+                                    'key' => 'selesai',
+                                    'short_name' => 'Selesai',
+                                    'label' => 'Selesai Diperbaiki',
+                                    'progress' => "Selesai: {$upDesc}",
+                                    'photo' => $upPhoto ?? $initialPhoto,
+                                    'caption' => $upDesc
+                                ];
+                            } else {
+                                $stages[] = [
+                                    'key' => "m-{$wNum}",
+                                    'short_name' => "M-{$wNum}",
+                                    'label' => "Minggu ke-{$wNum}",
+                                    'progress' => "M-{$wNum}: {$upDesc}",
+                                    'photo' => $upPhoto ?? $initialPhoto,
+                                    'caption' => $upDesc
+                                ];
+                            }
                         }
 
-                        // 4. Selesai (Hanya jika status laporan sudah Selesai atau ada dokumentasi penyelesaian)
-                        $isFinished = ($r->status === \App\Models\Report::STATUS_SELESAI);
-                        if ($isFinished) {
-                            $finalPhoto = $updates->last()?->photos?->first()?->file_url 
-                                ?? $initialPhoto;
-
+                        // 4. Fallback jika status laporan Selesai tapi belum ada catatan progressUpdates
+                        if ($isFinished && $totalUpdates === 0) {
                             $finalDesc = !empty($r->final_repair_notes) 
                                 ? $r->final_repair_notes 
                                 : 'Jalan Selesai Diperbaiki Mulus (Lolos Uji)';
@@ -131,7 +145,7 @@
                                 'short_name' => 'Selesai',
                                 'label' => 'Selesai Diperbaiki',
                                 'progress' => $finalDesc,
-                                'photo' => $finalPhoto,
+                                'photo' => $initialPhoto,
                                 'caption' => $finalDesc
                             ];
                         }
