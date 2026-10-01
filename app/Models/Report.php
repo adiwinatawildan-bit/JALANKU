@@ -202,4 +202,29 @@ class Report extends Model
         };
     }
 
+    // Google Maps Query helper prioritizing accurate address filled by citizen
+    public function getGoogleMapsQueryAttribute(): string
+    {
+        $address = $this->location?->address_detail;
+        if (!empty($address)) {
+            return $address;
+        }
+
+        $parts = array_filter([
+            $this->road_name,
+            $this->desa ? 'Desa ' . $this->desa : null,
+            $this->kecamatan ? 'Kecamatan ' . $this->kecamatan : null,
+            'Jawa Barat',
+        ]);
+
+        if (!empty($parts)) {
+            return implode(', ', $parts);
+        }
+
+        if ($this->location?->latitude && $this->location?->longitude) {
+            return $this->location->latitude . ',' . $this->location->longitude;
+        }
+
+        return $this->road_name ?? '';
+    }
 }
