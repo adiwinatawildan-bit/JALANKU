@@ -56,13 +56,6 @@
                             <i class="fa-solid fa-diamond-turn-right text-emerald-200"></i>
                             <span>Buka Rute di Google Maps</span>
                         </a>
-
-                        <a href="https://www.google.com/maps/search/?api=1&query={{ urlencode($report->google_maps_query) }}" 
-                           target="_blank" 
-                           class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition inline-flex items-center space-x-1.5">
-                            <i class="fa-solid fa-location-dot text-rose-500"></i>
-                            <span>Lihat Titik Koordinat</span>
-                        </a>
                     </div>
                 @endif
             </div>
