@@ -13,6 +13,7 @@ use App\Models\ReportStatusHistory;
 use App\Services\StorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class OpdController extends Controller
@@ -307,6 +308,8 @@ class OpdController extends Controller
                 userId: $user->id
             );
 
+            Cache::flush();
+
             $msg = $isComplete
                 ? "Perbaikan laporan #{$report->ticket_number} telah mencapai 100% dan berstatus SELESAI!"
                 : "Update progres Minggu {$validated['week_number']} ({$validated['progress_percentage']}%) berhasil disimpan.";
@@ -393,6 +396,8 @@ class OpdController extends Controller
                 userId: $user->id
             );
 
+            Cache::flush();
+
             return back()->with('success', "Catatan progres Minggu ke-{$validated['week_number']} berhasil diperbarui.");
         });
     }
@@ -438,6 +443,8 @@ class OpdController extends Controller
                 description: "Petugas {$user->name} menghapus seluruh catatan progres minggu ke-{$weekNum} pada laporan #{$report->ticket_number}.",
                 userId: $user->id
             );
+
+            Cache::flush();
 
             return back()->with('success', "Catatan progres Minggu ke-{$weekNum} beserta dokumentasinya berhasil dihapus.");
         });

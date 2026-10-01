@@ -144,17 +144,22 @@ class Report extends Model
             return 100;
         }
 
-        $latest = $this->progressUpdates()->latest('week_number')->first();
-        if ($latest) {
-            return (int) $latest->progress_percentage;
+        // 1. Cek dari relational collection jika sudah terload di memory
+        if ($this->relationLoaded('progressUpdates') && $this->progressUpdates->isNotEmpty()) {
+            $latest = $this->progressUpdates->sortByDesc('week_number')->sortByDesc('id')->first();
+            if ($latest) {
+                return (int) round($latest->progress_percentage);
+            }
         }
 
-        return match ($this->status) {
-            self::STATUS_SEDANG_DIPERBAIKI => 20,
-            self::STATUS_MENUNGGU_PERBAIKAN => 10,
-            self::STATUS_SURVEI => 5,
-            default => 0,
-        };
+        // 2. Query ke database untuk mendapatkan update progres terbaru yang diisi oleh OPD
+        $latest = $this->progressUpdates()->latest('week_number')->latest('id')->first();
+        if ($latest) {
+            return (int) round($latest->progress_percentage);
+        }
+
+        // Jika belum ada update progres yang diisi OPD, tampilkan 0%
+        return 0;
     }
 
     // Status color badge helper
