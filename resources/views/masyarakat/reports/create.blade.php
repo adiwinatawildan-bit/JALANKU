@@ -16,7 +16,7 @@
             <span>Kembali ke Dashboard</span>
         </a>
         <h1 class="text-3xl font-extrabold text-navy-900 tracking-tight">Form Pengaduan Kerusakan Jalan</h1>
-        <p class="text-sm text-slate-600">Lengkapi data kerusakan jalan dan lampirkan maksimal 3 foto kondisi awal beserta titik koordinat GPS.</p>
+        <p class="text-sm text-slate-600">Lengkapi data kerusakan jalan dan lampirkan foto kondisi awal beserta titik koordinat GPS.</p>
     </div>
 
     <!-- Main Card Form -->
@@ -131,16 +131,13 @@
                 </div>
             </div>
 
-            <!-- 16, 18, 38, 39, 40. UPLOAD FOTO KONDISI AWAL (Maksimal 3 Foto) -->
+            <!-- 16, 18, 38, 39, 40. UPLOAD FOTO KONDISI AWAL -->
             <div class="space-y-4 pt-4 border-t border-slate-100">
                 <div class="flex items-center justify-between">
                     <h3 class="text-base font-bold text-navy-900 flex items-center">
                         <span class="w-6 h-6 rounded-full bg-navy-900 text-amber-400 text-xs flex items-center justify-center font-bold mr-2">3</span>
                         Foto Kondisi Awal
                     </h3>
-                    <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                        Maksimal 3 Foto
-                    </span>
                 </div>
 
                 <!-- 16. Alert Box Warning -->

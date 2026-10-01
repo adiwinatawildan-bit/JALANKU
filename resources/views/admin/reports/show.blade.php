@@ -230,7 +230,7 @@
             <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                     <h3 class="text-base font-bold text-navy-900 flex items-center">
-                        <i class="fa-solid fa-images text-amber-500 mr-2"></i> Foto Kondisi Awal (Maksimal 3 Foto)
+                        <i class="fa-solid fa-images text-amber-500 mr-2"></i> Foto Kondisi Awal
                     </h3>
                     <span class="text-xs text-slate-400">{{ $report->initialPhotos->count() }} Terunggah</span>
                 </div>
