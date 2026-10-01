@@ -48,16 +48,16 @@
                 @endif
 
                 <!-- Navigation GPS Action Buttons for Field Officers -->
-                @if($report->location?->latitude && $report->location?->longitude || $report->google_maps_query)
+                @if($report->location?->latitude && $report->location?->longitude)
                     <div class="flex flex-wrap items-center gap-2.5 pt-2">
-                        <a href="https://www.google.com/maps/dir/?api=1&destination={{ urlencode($report->google_maps_query) }}" 
+                        <a href="https://www.google.com/maps/dir/?api=1&destination={{ $report->location->latitude }},{{ $report->location->longitude }}" 
                            target="_blank" 
                            class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition inline-flex items-center space-x-2">
                             <i class="fa-solid fa-diamond-turn-right text-emerald-200"></i>
                             <span>Buka Rute di Google Maps</span>
                         </a>
 
-                        <a href="https://maps.google.com/?q={{ urlencode($report->google_maps_query) }}" 
+                        <a href="https://www.google.com/maps?q={{ $report->location->latitude }},{{ $report->location->longitude }}" 
                            target="_blank" 
                            class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition inline-flex items-center space-x-1.5">
                             <i class="fa-solid fa-location-dot text-rose-500"></i>
