@@ -61,10 +61,7 @@
             @php
                 $portalRoute = route('home');
                 $roleLabel = 'Petugas';
-                if (Auth::user()->isSuperAdmin()) {
-                    $portalRoute = route('superadmin.dashboard');
-                    $roleLabel = 'Super Admin';
-                } elseif (Auth::user()->isAdmin()) {
+                if (Auth::user()->isAdmin()) {
                     $portalRoute = route('admin.dashboard');
                     $roleLabel = 'Administrator';
                 } elseif (Auth::user()->isOpd()) {
@@ -145,9 +142,7 @@
                     @auth
                         @php
                             $userPortalRoute = route('home');
-                            if (Auth::user()->isSuperAdmin()) {
-                                $userPortalRoute = route('superadmin.dashboard');
-                            } elseif (Auth::user()->isAdmin()) {
+                            if (Auth::user()->isAdmin()) {
                                 $userPortalRoute = route('admin.dashboard');
                             } elseif (Auth::user()->isOpd()) {
                                 $userPortalRoute = route('opd.dashboard');
@@ -203,10 +198,6 @@
                                         </a>
                                         <a href="{{ route('opd.tasks.index') }}" class="flex items-center px-4 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 hover:text-amber-400">
                                             <i class="fa-solid fa-list-check mr-2.5 text-sky-400 w-4"></i> Daftar Tugas Perbaikan
-                                        </a>
-                                    @elseif(Auth::user()->isSuperAdmin())
-                                        <a href="{{ route('superadmin.dashboard') }}" class="flex items-center px-4 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 hover:text-amber-400">
-                                            <i class="fa-solid fa-sliders mr-2.5 text-amber-400 w-4"></i> Super Admin Panel
                                         </a>
                                     @endif
 

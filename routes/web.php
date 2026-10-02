@@ -42,8 +42,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profil', [AuthController::class, 'profile'])->name('profile');
     Route::post('/profil', [AuthController::class, 'updateProfile'])->name('profile.update');
 
-    // MASYARAKAT PORTAL (Accessible by Masyarakat, Admin, OPD, SuperAdmin)
-    Route::prefix('masyarakat')->name('masyarakat.')->middleware('role:masyarakat,admin,opd,super_admin')->group(function () {
+    // MASYARAKAT PORTAL (Accessible by Masyarakat, Admin, OPD)
+    Route::prefix('masyarakat')->name('masyarakat.')->middleware('role:masyarakat,admin,opd')->group(function () {
         Route::get('/dashboard', [MasyarakatReportController::class, 'dashboard'])->name('dashboard');
         Route::get('/laporan/buat', [MasyarakatReportController::class, 'create'])->name('reports.create');
         Route::post('/laporan', [MasyarakatReportController::class, 'store'])->name('reports.store');
@@ -52,8 +52,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/laporan/{id}/feedback', [MasyarakatReportController::class, 'submitFeedback'])->name('reports.feedback');
     });
 
-    // ADMIN PORTAL (Accessible by Admin, SuperAdmin)
-    Route::prefix('admin')->name('admin.')->middleware('role:admin,super_admin')->group(function () {
+    // ADMIN PORTAL (Accessible by Admin - Semua Fitur Super Admin Dipindahkan ke Sini)
+    Route::prefix('admin')->name('admin.')->middleware('role:admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/laporan', [AdminController::class, 'reports'])->name('reports.index');
         Route::get('/laporan/{id}', [AdminController::class, 'show'])->name('reports.show');
@@ -67,24 +67,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/foto/{id}', [AdminController::class, 'deleteReportPhoto'])->name('photos.delete');
         Route::delete('/foto-progres/{id}', [AdminController::class, 'deleteProgressPhoto'])->name('progress-photos.delete');
         Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
-    });
 
-    // OPD / PETUGAS PORTAL (Accessible by OPD, Admin, SuperAdmin)
-    Route::prefix('opd')->name('opd.')->middleware('role:opd,admin,super_admin')->group(function () {
-        Route::get('/dashboard', [OpdController::class, 'dashboard'])->name('dashboard');
-        Route::get('/tugas', [OpdController::class, 'tasks'])->name('tasks.index');
-        Route::get('/tugas/{id}', [OpdController::class, 'show'])->name('tasks.show');
-        Route::post('/tugas/{id}/survei', [OpdController::class, 'startSurvey'])->name('tasks.survey');
-        Route::post('/tugas/{id}/progres', [OpdController::class, 'storeProgress'])->name('tasks.progress');
-        Route::put('/tugas/{id}/progres/{progressId}', [OpdController::class, 'updateProgress'])->name('tasks.progress.update');
-        Route::delete('/tugas/{id}/progres/{progressId}', [OpdController::class, 'deleteProgress'])->name('tasks.progress.delete');
-        Route::delete('/foto-progres/{id}', [OpdController::class, 'deleteProgressPhoto'])->name('tasks.delete-photo');
-    });
-
-    // SUPER ADMIN PORTAL (Accessible by SuperAdmin)
-    Route::prefix('super-admin')->name('superadmin.')->middleware('role:super_admin')->group(function () {
-        Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('dashboard');
-        
+        // Master & Konfigurasi (Pindahan dari Super Admin):
         Route::get('/users', [SuperAdminController::class, 'users'])->name('users.index');
         Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('users.store');
         Route::put('/users/{id}', [SuperAdminController::class, 'updateUser'])->name('users.update');
@@ -100,9 +84,39 @@ Route::middleware('auth')->group(function () {
         Route::get('/kriteria', [SuperAdminController::class, 'criteria'])->name('criteria.index');
         Route::post('/kriteria/bobot', [SuperAdminController::class, 'updateWeights'])->name('criteria.update-weights');
 
-        Route::get('/audit-logs', [SuperAdminController::class, 'auditLogs'])->name('audit-logs.index');
-
         Route::get('/settings', [SuperAdminController::class, 'settings'])->name('settings.index');
         Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('settings.update');
+    });
+
+    // OPD / PETUGAS PORTAL (Accessible by OPD, Admin)
+    Route::prefix('opd')->name('opd.')->middleware('role:opd,admin')->group(function () {
+        Route::get('/dashboard', [OpdController::class, 'dashboard'])->name('dashboard');
+        Route::get('/tugas', [OpdController::class, 'tasks'])->name('tasks.index');
+        Route::get('/tugas/{id}', [OpdController::class, 'show'])->name('tasks.show');
+        Route::post('/tugas/{id}/survei', [OpdController::class, 'startSurvey'])->name('tasks.survey');
+        Route::post('/tugas/{id}/progres', [OpdController::class, 'storeProgress'])->name('tasks.progress');
+        Route::put('/tugas/{id}/progres/{progressId}', [OpdController::class, 'updateProgress'])->name('tasks.progress.update');
+        Route::delete('/tugas/{id}/progres/{progressId}', [OpdController::class, 'deleteProgress'])->name('tasks.progress.delete');
+        Route::delete('/foto-progres/{id}', [OpdController::class, 'deleteProgressPhoto'])->name('tasks.delete-photo');
+    });
+
+    // Alias kompatibilitas rute superadmin ke admin
+    Route::middleware('role:admin')->name('superadmin.')->group(function () {
+        Route::get('/super-admin/dashboard', fn() => redirect()->route('admin.dashboard'))->name('dashboard');
+        Route::get('/admin/users-alias', [SuperAdminController::class, 'users'])->name('users.index');
+        Route::post('/admin/users-alias', [SuperAdminController::class, 'storeUser'])->name('users.store');
+        Route::put('/admin/users-alias/{id}', [SuperAdminController::class, 'updateUser'])->name('users.update');
+        Route::delete('/admin/users-alias/{id}', [SuperAdminController::class, 'deleteUser'])->name('users.delete');
+        Route::get('/admin/opd-alias', [SuperAdminController::class, 'opds'])->name('opds.index');
+        Route::post('/admin/opd-alias', [SuperAdminController::class, 'storeOpd'])->name('opds.store');
+        Route::put('/admin/opd-alias/{id}', [SuperAdminController::class, 'updateOpd'])->name('opds.update');
+        Route::delete('/admin/opd-alias/{id}', [SuperAdminController::class, 'deleteOpd'])->name('opds.delete');
+        Route::get('/admin/criteria-alias', [SuperAdminController::class, 'criteria'])->name('criteria.index');
+        Route::post('/admin/criteria-alias/bobot', [SuperAdminController::class, 'updateWeights'])->name('criteria.update-weights');
+        Route::get('/admin/audit-logs-alias', [AdminController::class, 'auditLogs'])->name('audit-logs.index');
+        Route::get('/admin/settings-alias', [SuperAdminController::class, 'settings'])->name('settings.index');
+        Route::post('/admin/settings-alias', [SuperAdminController::class, 'updateSettings'])->name('settings.update');
+        Route::put('/super-admin/users/{id}', [SuperAdminController::class, 'updateUser']);
+        Route::put('/super-admin/opd/{id}', [SuperAdminController::class, 'updateOpd']);
     });
 });

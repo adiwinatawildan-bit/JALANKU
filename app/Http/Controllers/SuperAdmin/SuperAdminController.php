@@ -7,12 +7,14 @@ use App\Models\AuditLog;
 use App\Models\Opd;
 use App\Models\PriorityCriterion;
 use App\Models\PriorityWeight;
+use App\Models\Report;
 use App\Models\Role;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\TopsisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
@@ -106,7 +108,7 @@ class SuperAdminController extends Controller
             activity: 'Pembuatan User Baru',
             targetType: 'User',
             targetId: $user->id,
-            description: "Super Admin membuat user baru {$user->name} ({$user->role->display_name}).",
+            description: "Admin membuat user baru {$user->name} ({$user->role->display_name}).",
             userId: Auth::id()
         );
 
@@ -157,7 +159,7 @@ class SuperAdminController extends Controller
             activity: 'Update Informasi User',
             targetType: 'User',
             targetId: $user->id,
-            description: "Super Admin memperbarui data user {$user->name}.",
+            description: "Admin memperbarui data user {$user->name}.",
             userId: Auth::id()
         );
 
@@ -182,7 +184,7 @@ class SuperAdminController extends Controller
             activity: 'Hapus User Pengguna',
             targetType: 'User',
             targetId: $id,
-            description: "Super Admin menghapus akun user {$name}.",
+            description: "Admin menghapus akun user {$name}.",
             userId: Auth::id()
         );
 
@@ -264,7 +266,7 @@ class SuperAdminController extends Controller
             activity: 'Hapus Master Data OPD',
             targetType: 'Opd',
             targetId: $id,
-            description: "Super Admin menghapus OPD {$name}.",
+            description: "Admin menghapus OPD {$name}.",
             userId: Auth::id()
         );
 
@@ -311,7 +313,7 @@ class SuperAdminController extends Controller
                 activity: 'Penyesuaian Bobot Kriteria TOPSIS',
                 targetType: 'PriorityCriterion',
                 targetId: 'ALL',
-                description: 'Super Admin memperbarui bobot 8 kriteria SPK TOPSIS.',
+                description: 'Admin memperbarui bobot 8 kriteria SPK TOPSIS.',
                 userId: Auth::id()
             );
         });
@@ -387,7 +389,7 @@ class SuperAdminController extends Controller
             activity: 'Update Pengaturan Sistem',
             targetType: 'Setting',
             targetId: 'SYSTEM',
-            description: 'Super Admin memperbarui konfigurasi & logo sistem.',
+            description: 'Admin memperbarui konfigurasi & logo sistem.',
             userId: Auth::id()
         );
 

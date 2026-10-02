@@ -224,7 +224,6 @@ class AuthController extends Controller
     public function redirectBasedOnRole(User $user)
     {
         return match ($user->role?->name) {
-            'super_admin' => redirect()->route('superadmin.dashboard'),
             'admin' => redirect()->route('admin.dashboard'),
             'opd' => redirect()->route('opd.dashboard'),
             default => redirect()->route('masyarakat.dashboard'),

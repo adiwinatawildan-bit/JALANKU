@@ -10,7 +10,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h2 class="text-xl font-extrabold text-navy-900">Manajemen Pengguna</h2>
-            <p class="text-xs text-slate-500">Kelola akun Masyarakat, Admin, OPD/Petugas, dan Super Admin beserta foto profil.</p>
+            <p class="text-xs text-slate-500">Kelola akun Masyarakat, Admin, dan OPD/Petugas beserta foto profil.</p>
         </div>
         <button type="button" onclick="openModal('modal-add-user')" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-navy-950 font-bold text-xs rounded-xl shadow transition flex items-center space-x-1.5">
             <i class="fa-solid fa-user-plus"></i>
@@ -278,7 +278,7 @@
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
     function editUser(user, avatarUrl) {
-        document.getElementById('form-edit-user').action = '/super-admin/users/' + user.id;
+        document.getElementById('form-edit-user').action = '{{ url('/admin/users') }}/' + user.id;
         document.getElementById('edit-name').value = user.name;
         document.getElementById('edit-email').value = user.email;
         document.getElementById('edit-phone').value = user.phone || '';

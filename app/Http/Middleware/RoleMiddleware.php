@@ -31,29 +31,23 @@ class RoleMiddleware
 
         $user = $request->user();
 
-        // 1. Super Admin has full overarching access to all features and portals
-        if ($user->isSuperAdmin()) {
-            return $next($request);
-        }
-
-        // 2. Admin can access admin, opd tasks, and citizen reporting
+        // 1. Admin can access admin, opd tasks, and citizen reporting
         if ($user->isAdmin() && (in_array('admin', $roles) || in_array('opd', $roles) || in_array('masyarakat', $roles))) {
             return $next($request);
         }
 
-        // 3. OPD can access opd tasks and citizen reporting
+        // 2. OPD can access opd tasks and citizen reporting
         if ($user->isOpd() && (in_array('opd', $roles) || in_array('masyarakat', $roles))) {
             return $next($request);
         }
 
-        // 4. Exact role match
+        // 3. Exact role match
         if ($user->hasRole($roles)) {
             return $next($request);
         }
 
-        // 5. Graceful redirect instead of raw 403 error
+        // 4. Graceful redirect instead of raw 403 error
         $targetDashboard = match ($user->role?->name) {
-            'super_admin' => route('superadmin.dashboard'),
             'admin' => route('admin.dashboard'),
             'opd' => route('opd.dashboard'),
             default => route('masyarakat.dashboard'),

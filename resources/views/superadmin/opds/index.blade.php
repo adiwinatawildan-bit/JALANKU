@@ -185,7 +185,7 @@
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
     function editOpd(opd) {
-        document.getElementById('form-edit-opd').action = '/super-admin/opd/' + opd.id;
+        document.getElementById('form-edit-opd').action = '{{ url('/admin/opd') }}/' + opd.id;
         document.getElementById('edit-opd-name').value = opd.name;
         document.getElementById('edit-opd-code').value = opd.code;
         document.getElementById('edit-opd-phone').value = opd.phone || '';

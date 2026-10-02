@@ -20,19 +20,13 @@ class RoleSeeder extends Seeder
                 'id' => 2,
                 'name' => 'admin',
                 'display_name' => 'Admin Pengelola',
-                'description' => 'Verifikator laporan, penugasan OPD, dan monitoring sistem.',
+                'description' => 'Pengelola sistem, verifikator laporan, penugasan OPD, kriteria TOPSIS, dan konfigurasi master.',
             ],
             [
                 'id' => 3,
                 'name' => 'opd',
                 'display_name' => 'OPD / Petugas Lapangan',
                 'description' => 'Pelaksana survei, pekerjaan perbaikan jalan, dan dokumentasi progres mingguan.',
-            ],
-            [
-                'id' => 4,
-                'name' => 'super_admin',
-                'display_name' => 'Super Admin',
-                'description' => 'Pengelola sistem, hak akses, kriteria TOPSIS, dan konfigurasi master.',
             ],
         ];
 

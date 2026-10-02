@@ -10,16 +10,16 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $superadmin = [
-            'name' => 'Super Administrator',
-            'email' => 'superadmin@jalanku.go.id',
+        $admin = [
+            'name' => 'Administrator',
+            'email' => 'admin@jalanku.go.id',
             'phone' => '081234567890',
             'password' => Hash::make('qwerty123456'),
-            'role_id' => 4, // super_admin
+            'role_id' => 2, // admin
             'opd_id' => null,
             'is_active' => true,
         ];
 
-        User::updateOrCreate(['email' => $superadmin['email']], $superadmin);
+        User::updateOrCreate(['email' => $admin['email']], $admin);
     }
 }

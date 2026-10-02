@@ -98,12 +98,12 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole('super_admin');
+        return false;
     }
 
     public function isStaffOrAdmin(): bool
     {
-        return in_array($this->role?->name, ['admin', 'super_admin', 'opd']);
+        return in_array($this->role?->name, ['admin', 'opd']);
     }
 
     public function getAvatar(): ?string

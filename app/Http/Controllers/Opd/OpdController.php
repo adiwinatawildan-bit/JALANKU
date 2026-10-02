@@ -28,7 +28,7 @@ class OpdController extends Controller
         $user = Auth::user();
         $opdId = $user->opd_id;
 
-        // If user is super_admin or admin without specific opd, allow viewing first OPD or all assigned
+        // If user is admin without specific opd, allow viewing all assigned
         $query = Report::query();
         if ($opdId) {
             $query->where('opd_id', $opdId);
@@ -114,7 +114,7 @@ class OpdController extends Controller
             'damageDetections',
         ]);
 
-        if ($user->opd_id && !$user->isAdmin() && !$user->isSuperAdmin()) {
+        if ($user->opd_id && !$user->isAdmin()) {
             $query->where('opd_id', $user->opd_id);
         }
 

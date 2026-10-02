@@ -57,12 +57,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
     @php
-        $portalDashboardUrl = route('admin.dashboard');
-        if (Auth::user()->isSuperAdmin()) {
-            $portalDashboardUrl = route('superadmin.dashboard');
-        } elseif (Auth::user()->isOpd()) {
-            $portalDashboardUrl = route('opd.dashboard');
-        }
+        $portalDashboardUrl = Auth::user()->isOpd() ? route('opd.dashboard') : route('admin.dashboard');
     @endphp
 
     <!-- Mobile Sidebar Overlay & Drawer -->
@@ -115,10 +110,25 @@
                             <i class="fa-solid fa-list-check w-5 mr-2.5 {{ request()->routeIs('admin.reports.*') ? 'text-navy-950' : 'text-sky-400' }}"></i>
                             Kelola Laporan
                         </a>
-
-                        <a href="{{ route('admin.audit-logs') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.audit-logs') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <i class="fa-solid fa-clock-rotate-left w-5 mr-2.5 {{ request()->routeIs('admin.audit-logs') ? 'text-navy-950' : 'text-indigo-400' }}"></i>
+                        <a href="{{ route('admin.users.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.users.*') || request()->routeIs('superadmin.users.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                            <i class="fa-solid fa-users w-5 mr-2.5 {{ request()->routeIs('admin.users.*') || request()->routeIs('superadmin.users.*') ? 'text-navy-950' : 'text-sky-400' }}"></i>
+                            User Management
+                        </a>
+                        <a href="{{ route('admin.opds.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.opds.*') || request()->routeIs('superadmin.opds.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                            <i class="fa-solid fa-building-columns w-5 mr-2.5 {{ request()->routeIs('admin.opds.*') || request()->routeIs('superadmin.opds.*') ? 'text-navy-950' : 'text-emerald-400' }}"></i>
+                            Kelola OPD
+                        </a>
+                        <a href="{{ route('admin.criteria.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.criteria.*') || request()->routeIs('superadmin.criteria.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                            <i class="fa-solid fa-scale-balanced w-5 mr-2.5 {{ request()->routeIs('admin.criteria.*') || request()->routeIs('superadmin.criteria.*') ? 'text-navy-950' : 'text-purple-400' }}"></i>
+                            Kriteria TOPSIS
+                        </a>
+                        <a href="{{ route('admin.audit-logs') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.audit-logs*') || request()->routeIs('superadmin.audit-logs.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                            <i class="fa-solid fa-clock-rotate-left w-5 mr-2.5 {{ request()->routeIs('admin.audit-logs*') || request()->routeIs('superadmin.audit-logs.*') ? 'text-navy-950' : 'text-indigo-400' }}"></i>
                             Audit Log
+                        </a>
+                        <a href="{{ route('admin.settings.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.settings.*') || request()->routeIs('superadmin.settings.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                            <i class="fa-solid fa-gear w-5 mr-2.5 {{ request()->routeIs('admin.settings.*') || request()->routeIs('superadmin.settings.*') ? 'text-navy-950' : 'text-slate-400' }}"></i>
+                            Konfigurasi
                         </a>
                     </nav>
                 </div>
@@ -135,38 +145,6 @@
                         <a href="{{ route('opd.tasks.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('opd.tasks.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                             <i class="fa-solid fa-helmet-safety w-5 mr-2.5 {{ request()->routeIs('opd.tasks.*') ? 'text-navy-950' : 'text-orange-400' }}"></i>
                             Tugas Perbaikan
-                        </a>
-                    </nav>
-                </div>
-            @endif
-
-            @if(Auth::user()->isSuperAdmin())
-                <div>
-                    <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Super Admin</p>
-                    <nav class="space-y-0.5">
-                        <a href="{{ route('superadmin.dashboard') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('superadmin.dashboard') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <i class="fa-solid fa-sliders w-5 mr-2.5 {{ request()->routeIs('superadmin.dashboard') ? 'text-navy-950' : 'text-amber-400' }}"></i>
-                            Dashboard
-                        </a>
-                        <a href="{{ route('superadmin.users.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('superadmin.users.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <i class="fa-solid fa-users w-5 mr-2.5 text-sky-400"></i>
-                            User Management
-                        </a>
-                        <a href="{{ route('superadmin.opds.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('superadmin.opds.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <i class="fa-solid fa-building-columns w-5 mr-2.5 text-emerald-400"></i>
-                            Kelola OPD
-                        </a>
-                        <a href="{{ route('superadmin.criteria.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('superadmin.criteria.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <i class="fa-solid fa-scale-balanced w-5 mr-2.5 text-purple-400"></i>
-                            Kriteria TOPSIS
-                        </a>
-                        <a href="{{ route('superadmin.audit-logs.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('superadmin.audit-logs.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <i class="fa-solid fa-clipboard-list w-5 mr-2.5 text-indigo-400"></i>
-                            Audit Logs
-                        </a>
-                        <a href="{{ route('superadmin.settings.index') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('superadmin.settings.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <i class="fa-solid fa-gear w-5 mr-2.5 text-slate-400"></i>
-                            Konfigurasi
                         </a>
                     </nav>
                 </div>
@@ -236,10 +214,25 @@
                                 <i class="fa-solid fa-list-check w-5 mr-3 {{ request()->routeIs('admin.reports.*') ? 'text-navy-950' : 'text-sky-400' }}"></i>
                                 Kelola Seluruh Laporan
                             </a>
-
-                            <a href="{{ route('admin.audit-logs') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('admin.audit-logs') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <i class="fa-solid fa-clock-rotate-left w-5 mr-3 {{ request()->routeIs('admin.audit-logs') ? 'text-navy-950' : 'text-indigo-400' }}"></i>
-                                Audit Log
+                            <a href="{{ route('admin.users.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('admin.users.*') || request()->routeIs('superadmin.users.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                                <i class="fa-solid fa-users w-5 mr-3 {{ request()->routeIs('admin.users.*') || request()->routeIs('superadmin.users.*') ? 'text-navy-950' : 'text-sky-400' }}"></i>
+                                User Management
+                            </a>
+                            <a href="{{ route('admin.opds.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('admin.opds.*') || request()->routeIs('superadmin.opds.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                                <i class="fa-solid fa-building-columns w-5 mr-3 {{ request()->routeIs('admin.opds.*') || request()->routeIs('superadmin.opds.*') ? 'text-navy-950' : 'text-emerald-400' }}"></i>
+                                Kelola OPD
+                            </a>
+                            <a href="{{ route('admin.criteria.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('admin.criteria.*') || request()->routeIs('superadmin.criteria.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                                <i class="fa-solid fa-scale-balanced w-5 mr-3 {{ request()->routeIs('admin.criteria.*') || request()->routeIs('superadmin.criteria.*') ? 'text-navy-950' : 'text-purple-400' }}"></i>
+                                Kriteria & Bobot TOPSIS
+                            </a>
+                            <a href="{{ route('admin.audit-logs') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('admin.audit-logs*') || request()->routeIs('superadmin.audit-logs.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                                <i class="fa-solid fa-clipboard-list w-5 mr-3 {{ request()->routeIs('admin.audit-logs*') || request()->routeIs('superadmin.audit-logs.*') ? 'text-navy-950' : 'text-indigo-400' }}"></i>
+                                Audit Logs Lengkap
+                            </a>
+                            <a href="{{ route('admin.settings.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('admin.settings.*') || request()->routeIs('superadmin.settings.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                                <i class="fa-solid fa-gear w-5 mr-3 {{ request()->routeIs('admin.settings.*') || request()->routeIs('superadmin.settings.*') ? 'text-navy-950' : 'text-slate-400' }}"></i>
+                                Konfigurasi Sistem
                             </a>
                         </nav>
                     </div>
@@ -257,40 +250,6 @@
                             <a href="{{ route('opd.tasks.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('opd.tasks.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                                 <i class="fa-solid fa-helmet-safety w-5 mr-3 {{ request()->routeIs('opd.tasks.*') ? 'text-navy-950' : 'text-orange-400' }}"></i>
                                 Daftar Tugas Perbaikan
-                            </a>
-                        </nav>
-                    </div>
-                @endif
-
-                @if(Auth::user()->isSuperAdmin())
-                    <!-- Super Admin Navigation -->
-                    <div>
-                        <p class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Master & Konfigurasi Super Admin</p>
-                        <nav class="space-y-1">
-                            <a href="{{ route('superadmin.dashboard') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('superadmin.dashboard') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <i class="fa-solid fa-sliders w-5 mr-3 {{ request()->routeIs('superadmin.dashboard') ? 'text-navy-950' : 'text-amber-400' }}"></i>
-                                Dashboard Super Admin
-                            </a>
-                            <a href="{{ route('superadmin.users.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('superadmin.users.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <i class="fa-solid fa-users w-5 mr-3 text-sky-400"></i>
-                                User Management
-                            </a>
-                            <a href="{{ route('superadmin.opds.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('superadmin.opds.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <i class="fa-solid fa-building-columns w-5 mr-3 text-emerald-400"></i>
-                                Kelola OPD
-                            </a>
-                            <a href="{{ route('superadmin.criteria.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('superadmin.criteria.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <i class="fa-solid fa-scale-balanced w-5 mr-3 text-purple-400"></i>
-                                Kriteria & Bobot TOPSIS
-                            </a>
-
-                            <a href="{{ route('superadmin.audit-logs.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('superadmin.audit-logs.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <i class="fa-solid fa-clipboard-list w-5 mr-3 text-indigo-400"></i>
-                                Audit Logs Lengkap
-                            </a>
-                            <a href="{{ route('superadmin.settings.index') }}" class="flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('superadmin.settings.*') ? 'bg-amber-500 text-navy-950 font-bold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <i class="fa-solid fa-gear w-5 mr-3 text-slate-400"></i>
-                                Konfigurasi Sistem
                             </a>
                         </nav>
                     </div>
