@@ -70,7 +70,7 @@ class SuperAdminController extends Controller
         }
 
         $users = $query->latest()->paginate(15)->withQueryString();
-        $roles = Role::all();
+        $roles = Role::whereNotIn('name', ['super_admin'])->get();
         $opds = Opd::where('is_active', true)->get();
 
         return view('superadmin.users.index', compact('users', 'roles', 'opds'));

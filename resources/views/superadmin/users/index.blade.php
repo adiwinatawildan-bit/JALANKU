@@ -30,7 +30,9 @@
                 <select name="role_id" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
                     <option value="">Semua Peran (Role)</option>
                     @foreach($roles as $r)
-                        <option value="{{ $r->id }}" {{ request('role_id') == $r->id ? 'selected' : '' }}>{{ $r->display_name }}</option>
+                        @if($r->name !== 'super_admin' && !str_contains(strtolower($r->name), 'super') && !str_contains(strtolower($r->display_name), 'super'))
+                            <option value="{{ $r->id }}" {{ request('role_id') == $r->id ? 'selected' : '' }}>{{ $r->display_name }}</option>
+                        @endif
                     @endforeach
                 </select>
             </div>
@@ -154,7 +156,9 @@
                     <label class="block text-xs font-bold text-slate-700">Role / Peran <span class="text-rose-500">*</span></label>
                     <select name="role_id" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
                         @foreach($roles as $r)
-                            <option value="{{ $r->id }}">{{ $r->display_name }}</option>
+                            @if($r->name !== 'super_admin' && !str_contains(strtolower($r->name), 'super') && !str_contains(strtolower($r->display_name), 'super'))
+                                <option value="{{ $r->id }}">{{ $r->display_name }}</option>
+                            @endif
                         @endforeach
                     </select>
                 </div>
@@ -217,7 +221,9 @@
                     <label class="block text-xs font-bold text-slate-700">Role</label>
                     <select id="edit-role-id" name="role_id" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none">
                         @foreach($roles as $r)
-                            <option value="{{ $r->id }}">{{ $r->display_name }}</option>
+                            @if($r->name !== 'super_admin' && !str_contains(strtolower($r->name), 'super') && !str_contains(strtolower($r->display_name), 'super'))
+                                <option value="{{ $r->id }}">{{ $r->display_name }}</option>
+                            @endif
                         @endforeach
                     </select>
                 </div>
