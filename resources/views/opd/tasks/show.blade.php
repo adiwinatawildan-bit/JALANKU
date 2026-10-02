@@ -48,7 +48,7 @@
                 @endif
 
                 <!-- Navigation GPS Action Buttons for Field Officers -->
-                @if($report->google_maps_query || $report->location?->latitude)
+                @if($report->google_maps_query || $report->location?->address_detail || $report->road_name)
                     <div class="flex flex-wrap items-center gap-2.5 pt-2">
                         <a href="https://www.google.com/maps/dir/?api=1&destination={{ urlencode($report->google_maps_query) }}" 
                            target="_blank" 
