@@ -56,13 +56,21 @@
     @stack('styles')
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
+    @php
+        $portalDashboardUrl = route('admin.dashboard');
+        if (Auth::user()->isSuperAdmin()) {
+            $portalDashboardUrl = route('superadmin.dashboard');
+        } elseif (Auth::user()->isOpd()) {
+            $portalDashboardUrl = route('opd.dashboard');
+        }
+    @endphp
 
     <!-- Mobile Sidebar Overlay & Drawer -->
     <div id="mobile-sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity duration-300 opacity-0"></div>
     <aside id="mobile-sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-72 bg-navy-950 text-slate-300 z-50 flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden overflow-y-auto">
         <!-- Drawer Header -->
         <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800 shrink-0">
-            <a href="{{ route('home') }}" class="flex items-center space-x-2.5">
+            <a href="{{ $portalDashboardUrl }}" class="flex items-center space-x-2.5">
                 <img src="{{ \App\Models\SystemSetting::getLogo() }}" alt="{{ \App\Models\SystemSetting::appName() }} Logo" class="w-9 h-9 rounded-xl object-contain bg-navy-900 border border-slate-700/80 p-0.5 shadow-md shadow-amber-500/10">
                 <div>
                     <span class="text-base font-extrabold text-white tracking-tight">{{ \App\Models\SystemSetting::appName() }}</span>
@@ -164,12 +172,6 @@
                 </div>
             @endif
 
-            <div class="pt-3 border-t border-slate-800">
-                <a href="{{ route('home') }}" class="flex items-center px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition">
-                    <i class="fa-solid fa-arrow-up-right-from-square w-5 mr-2.5 text-amber-400"></i>
-                    Portal Publik
-                </a>
-            </div>
         </div>
 
         <!-- Drawer Logout -->
@@ -190,7 +192,7 @@
         <aside class="w-64 bg-navy-950 text-slate-300 border-r border-slate-800 flex flex-col shrink-0 hidden md:flex">
             <!-- Brand -->
             <div class="h-20 flex items-center px-6 border-b border-slate-800">
-                <a href="{{ route('home') }}" class="flex items-center space-x-3">
+                <a href="{{ $portalDashboardUrl }}" class="flex items-center space-x-3">
                     <img src="{{ \App\Models\SystemSetting::getLogo() }}" alt="{{ \App\Models\SystemSetting::appName() }} Logo" class="w-10 h-10 rounded-xl object-contain bg-navy-900 border border-slate-700/80 p-0.5 shadow-md shadow-amber-500/10">
                     <div>
                         <span class="text-lg font-extrabold text-white tracking-tight">{{ \App\Models\SystemSetting::appName() }}</span>
@@ -293,14 +295,6 @@
                         </nav>
                     </div>
                 @endif
-
-                <!-- Portal Publik Shortcut -->
-                <div class="pt-4 border-t border-slate-800">
-                    <a href="{{ route('home') }}" class="flex items-center px-3.5 py-2 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-arrow-up-right-from-square w-5 mr-3 text-amber-400"></i>
-                        Lihat Portal Publik
-                    </a>
-                </div>
 
             </div>
 

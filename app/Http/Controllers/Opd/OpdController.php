@@ -8,12 +8,10 @@ use App\Models\Notification;
 use App\Models\ProgressPhoto;
 use App\Models\ProgressUpdate;
 use App\Models\Report;
-use App\Models\ReportPhoto;
 use App\Models\ReportStatusHistory;
 use App\Services\StorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class OpdController extends Controller

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Models\Facility;
 use App\Models\Opd;
 use App\Models\PriorityCriterion;
 use App\Models\PriorityWeight;
@@ -14,7 +13,6 @@ use App\Models\User;
 use App\Services\TopsisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;

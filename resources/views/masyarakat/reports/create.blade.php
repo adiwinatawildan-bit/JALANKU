@@ -218,16 +218,16 @@
 
         var marker = L.marker([initLat, initLng], { draggable: true }).addTo(map);
 
-        function updateCoords(lat, lng, shouldGeocode = false) {
+        function updateCoords(lat, lng, shouldGeocode = false, forceOverwrite = false) {
             document.getElementById('latitude').value = lat.toFixed(7);
             document.getElementById('longitude').value = lng.toFixed(7);
             if (shouldGeocode) {
-                reverseGeocodeAddress(lat, lng);
+                reverseGeocodeAddress(lat, lng, forceOverwrite);
             }
         }
 
         // Reverse Geocoding to automatically fill address fields
-        function reverseGeocodeAddress(lat, lng) {
+        function reverseGeocodeAddress(lat, lng, forceOverwrite = false) {
             var statusEl = document.getElementById('gps-status-text');
             if (statusEl) {
                 statusEl.innerHTML = '<span class="text-amber-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Mengambil data alamat lokasi...</span>';
@@ -302,21 +302,27 @@
                             road = 'Jalan ' + cleanDistrict;
                         }
 
-                        if (road) {
-                            document.getElementById('road_name').value = road;
+                        var roadEl = document.getElementById('road_name');
+                        var kecEl = document.getElementById('kecamatan');
+                        var desaEl = document.getElementById('desa');
+                        var addrEl = document.getElementById('address_detail');
+
+                        // Hormati isian manual masyarakat: jangan timpa jika sudah diisi manual kecuali tombol GPS ditekan
+                        if (road && (forceOverwrite || !roadEl.value.trim())) {
+                            roadEl.value = road;
                         }
-                        if (cleanDistrict) {
-                            document.getElementById('kecamatan').value = 'Kecamatan ' + cleanDistrict;
+                        if (cleanDistrict && (forceOverwrite || !kecEl.value.trim())) {
+                            kecEl.value = 'Kecamatan ' + cleanDistrict;
                         }
-                        if (cleanVillage) {
-                            document.getElementById('desa').value = cleanVillage;
+                        if (cleanVillage && (forceOverwrite || !desaEl.value.trim())) {
+                            desaEl.value = cleanVillage;
                         }
-                        if (fullAddress) {
-                            document.getElementById('address_detail').value = fullAddress;
+                        if (fullAddress && (forceOverwrite || !addrEl.value.trim())) {
+                            addrEl.value = fullAddress;
                         }
 
                         if (statusEl) {
-                            statusEl.innerHTML = '<span class="text-emerald-600 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Alamat & wilayah berhasil diisi otomatis sesuai titik GPS!</span>';
+                            statusEl.innerHTML = '<span class="text-emerald-600 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Alamat & wilayah berhasil disesuaikan dengan titik lokasi!</span>';
                         }
                     } else {
                         if (statusEl) {
@@ -334,12 +340,12 @@
 
         marker.on('dragend', function(e) {
             var pos = e.target.getLatLng();
-            updateCoords(pos.lat, pos.lng, true);
+            updateCoords(pos.lat, pos.lng, true, false);
         });
 
         map.on('click', function(e) {
             marker.setLatLng(e.latlng);
-            updateCoords(e.latlng.lat, e.latlng.lng, true);
+            updateCoords(e.latlng.lat, e.latlng.lng, true, false);
         });
 
         // GPS Geolocation Button with Auto Address Fill
@@ -355,7 +361,7 @@
                     var lng = position.coords.longitude;
                     map.setView([lat, lng], 17);
                     marker.setLatLng([lat, lng]);
-                    updateCoords(lat, lng, true);
+                    updateCoords(lat, lng, true, true); // forceOverwrite = true karena masyarakat eksplisit menekan tombol GPS
 
                     btn.innerHTML = originalText;
                     btn.disabled = false;

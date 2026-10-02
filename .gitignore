@@ -30,4 +30,5 @@ cloudflared_bin.exe
 __pycache__/
 *.pyc
 ~$*
+yolov8n.pt
 

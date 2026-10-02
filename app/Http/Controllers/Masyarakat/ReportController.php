@@ -3,13 +3,11 @@
 namespace App\Http\Controllers\Masyarakat;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
 use App\Models\Location;
 use App\Models\Notification;
 use App\Models\Report;
 use App\Models\ReportPhoto;
 use App\Models\ReportStatusHistory;
-use App\Models\User;
 use App\Services\StorageService;
 use App\Services\TopsisService;
 use App\Services\YoloService;
@@ -76,17 +74,7 @@ class ReportController extends Controller
 
     public function create()
     {
-        $kecamatanList = [
-            'Kecamatan Sentral',
-            'Kecamatan Timur',
-            'Kecamatan Barat',
-            'Kecamatan Utara',
-            'Kecamatan Selatan',
-            'Kecamatan Cikajang',
-            'Kecamatan Sukamaju',
-        ];
-
-        return view('masyarakat.reports.create', compact('kecamatanList'));
+        return view('masyarakat.reports.create');
     }
 
     public function store(Request $request)

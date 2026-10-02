@@ -202,18 +202,20 @@ class Report extends Model
         };
     }
 
-    // Google Maps Query helper prioritizing accurate address filled by citizen
+    // Google Maps Query helper prioritizing accurate coordinates/address filled by citizen
     public function getGoogleMapsQueryAttribute(): string
     {
-        $address = $this->location?->address_detail;
-        if (!empty($address)) {
-            return $address;
+        // 1. Prioritaskan koordinat presisi GPS agar rute Google Maps tepat sasaran di titik kerusakan jalan
+        if ($this->location?->latitude && $this->location?->longitude) {
+            return $this->location->latitude . ',' . $this->location->longitude;
         }
 
+        // 2. Jika koordinat tidak tersedia, susun dari nama jalan, desa, dan kecamatan yang diisi masyarakat
         $parts = array_filter([
             $this->road_name,
             $this->desa ? 'Desa ' . $this->desa : null,
             $this->kecamatan ? 'Kecamatan ' . $this->kecamatan : null,
+            'Garut',
             'Jawa Barat',
         ]);
 
@@ -221,8 +223,9 @@ class Report extends Model
             return implode(', ', $parts);
         }
 
-        if ($this->location?->latitude && $this->location?->longitude) {
-            return $this->location->latitude . ',' . $this->location->longitude;
+        $address = $this->location?->address_detail;
+        if (!empty($address)) {
+            return $address;
         }
 
         return $this->road_name ?? '';

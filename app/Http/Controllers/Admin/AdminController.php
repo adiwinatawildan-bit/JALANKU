@@ -7,11 +7,9 @@ use App\Models\AuditLog;
 use App\Models\Notification;
 use App\Models\Opd;
 use App\Models\PriorityResult;
-use App\Models\ProgressPhoto;
 use App\Models\Report;
 use App\Models\ReportPhoto;
 use App\Models\ReportStatusHistory;
-use App\Models\RoadAssessment;
 use App\Models\User;
 use App\Services\StorageService;
 use App\Services\TopsisService;
@@ -19,7 +17,6 @@ use App\Services\YoloService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
